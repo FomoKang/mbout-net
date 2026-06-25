@@ -848,6 +848,13 @@
       border-right: 0;
     }
 
+    .react.is-liked,
+    .react:disabled {
+      color: color-mix(in srgb, var(--card-fg, #1d1c18) 58%, transparent);
+      background: rgba(73,108,88,.08);
+      cursor: default;
+    }
+
     .report-btn {
       position: absolute;
       right: 12px;
@@ -1375,6 +1382,7 @@
     const themeKey = "again2002-theme-v1";
     const goalAwardKey = "again2002-goal-awards-v1";
     const reportKey = "again2002-reports-v1";
+    const likedPostKey = "again2002-liked-posts-v1";
     const logoAsset = "./assets/again2002-logo.png";
     const maxMediaBytes = 5 * 1024 * 1024;
     const serviceConfig = {
@@ -1798,6 +1806,29 @@
       return id;
     }
 
+    function likedPostIds() {
+      try {
+        const ids = JSON.parse(localStorage.getItem(likedPostKey) || "[]");
+        return Array.isArray(ids) ? ids : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function hasLikedPost(postId) {
+      return likedPostIds().includes(String(postId));
+    }
+
+    function markLikedPost(postId) {
+      const id = String(postId);
+      const ids = likedPostIds();
+      if (ids.includes(id)) return;
+      ids.push(id);
+      try {
+        localStorage.setItem(likedPostKey, JSON.stringify(ids.slice(-500)));
+      } catch {}
+    }
+
     function loadRegistry() {
       try {
         const registry = JSON.parse(localStorage.getItem(registryKey) || "null");
@@ -2184,6 +2215,11 @@
         button.addEventListener("click", async () => {
           const post = posts.find((item) => item.id === button.closest(".card").dataset.id);
           if (!post) return;
+          if (hasLikedPost(post.id)) {
+            showToast("공감은 한 번만 누를 수 있습니다.");
+            return;
+          }
+          markLikedPost(post.id);
           post.likes += 1;
           await persistLike(post);
           render();
@@ -2272,6 +2308,7 @@
 
     function cardTemplate(post) {
       const comments = post.comments || [];
+      const liked = hasLikedPost(post.id);
       return `
         <article class="card ${post.style}" data-id="${escapeAttr(post.id)}" style="--card-bg:${safeHex(post.bgColor, styleDefaults[post.style].bg)};--card-fg:${safeHex(post.textColor, styleDefaults[post.style].fg)}">
           <div class="card-main">
@@ -2286,7 +2323,7 @@
             ${mediaTemplate(post.media)}
           </div>
           <div class="card-actions">
-            <button class="react like-btn" type="button">공감 ${post.likes}</button>
+            <button class="react like-btn ${liked ? "is-liked" : ""}" type="button" aria-pressed="${liked ? "true" : "false"}" ${liked ? "disabled" : ""}>${liked ? "공감완료" : "공감"} ${post.likes}</button>
             <button class="react comment-toggle" type="button">댓글 ${comments.length}</button>
             <button class="react share-btn" type="button">공유</button>
           </div>
@@ -2444,10 +2481,152 @@
       const bg = safeHex(post.bgColor, "#f8f3e7");
       const fg = safeHex(post.textColor, "#1d1c18");
       const hasMedia = mediaImage || post.media?.type === "video";
+      const cardX = 70;
+      const cardY = 290;
+      const cardW = 940;
+      const cardH = hasMedia ? 1128 : 1028;
+      const footerY = 1490;
+
+      drawShareBackdrop(ctx, width, height);
+
+      ctx.fillStyle = "#1d1c18";
+      ctx.fillRect(0, 0, width, 14);
+      ctx.fillStyle = "#b94136";
+      ctx.fillRect(0, 14, width * .38, 10);
+      ctx.fillStyle = "#496c58";
+      ctx.fillRect(width * .38, 14, width * .32, 10);
+      ctx.fillStyle = "#d7a443";
+      ctx.fillRect(width * .7, 14, width * .3, 10);
+
+      if (logo) drawLogoSymbol(ctx, logo, 74, 68, 136, 92);
+      ctx.fillStyle = "#1d1c18";
+      ctx.font = "950 74px Pretendard, Arial, sans-serif";
+      ctx.fillText("Again 2002", 230, 124);
+      ctx.font = "900 26px Pretendard, Arial, sans-serif";
+      ctx.fillStyle = "#496c58";
+      ctx.fillText("한국 축구, 팬들의 목소리", 234, 168);
+      drawSharePill(ctx, 782, 82, 208, 52, "VOICE CARD", "#1d1c18", "#fffaf0");
+
+      ctx.save();
+      ctx.shadowColor = "rgba(49,44,35,.22)";
+      ctx.shadowBlur = 28;
+      ctx.shadowOffsetY = 18;
+      drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 30, bg);
+      ctx.restore();
+      ctx.strokeStyle = "rgba(29,28,24,.22)";
+      ctx.lineWidth = 4;
+      drawRoundedStroke(ctx, cardX, cardY, cardW, cardH, 30);
+
+      ctx.fillStyle = "rgba(73,108,88,.95)";
+      ctx.fillRect(cardX, cardY + 72, 12, 132);
+      ctx.fillStyle = "rgba(185,65,54,.92)";
+      ctx.fillRect(cardX, cardY + 204, 12, 74);
+
+      if (post.style === "board") {
+        ctx.strokeStyle = "rgba(255,255,255,.08)";
+        ctx.lineWidth = 2;
+        for (let x = cardX + 55; x < cardX + cardW - 45; x += 58) {
+          ctx.beginPath();
+          ctx.moveTo(x, cardY + 70);
+          ctx.lineTo(x, cardY + cardH - 70);
+          ctx.stroke();
+        }
+        for (let y = cardY + 86; y < cardY + cardH - 70; y += 58) {
+          ctx.beginPath();
+          ctx.moveTo(cardX + 55, y);
+          ctx.lineTo(cardX + cardW - 55, y);
+          ctx.stroke();
+        }
+      }
+
+      ctx.fillStyle = fg;
+      ctx.font = "950 34px Pretendard, Arial, sans-serif";
+      ctx.fillText(stripTags(post.authorName || "익명팬"), cardX + 64, cardY + 88);
+
+      const category = categoryName(post.category);
+      const categoryEmoji = categoryIcon(post.category);
+      ctx.font = "950 24px Pretendard, Arial, sans-serif";
+      const labelWidth = ctx.measureText(category).width;
+      const pillWidth = Math.max(132, labelWidth + 82);
+      const pillX = cardX + cardW - 64 - pillWidth;
+      drawRoundedRect(ctx, pillX, cardY + 48, pillWidth, 46, 14, "rgba(29,28,24,.08)");
+      ctx.strokeStyle = "rgba(29,28,24,.1)";
+      ctx.lineWidth = 2;
+      drawRoundedStroke(ctx, pillX, cardY + 48, pillWidth, 46, 14);
+      drawRoundedRect(ctx, pillX + 9, cardY + 56, 30, 30, 9, "rgba(255,250,240,.72)");
+      ctx.font = "900 20px 'Segoe UI Emoji', 'Apple Color Emoji', Pretendard, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillStyle = fg;
+      ctx.fillText(categoryEmoji, pillX + 24, cardY + 78);
+      ctx.font = "900 24px Pretendard, Arial, sans-serif";
+      ctx.fillStyle = fg;
+      ctx.fillText(category, pillX + 39 + (pillWidth - 48) / 2, cardY + 79);
+      ctx.textAlign = "left";
+
+      ctx.font = "800 25px Pretendard, Arial, sans-serif";
+      ctx.fillStyle = mixColor(fg, "#777777", .38);
+      ctx.fillText(isMemberAuthor(post) ? `Lv.${post.authorLevel || 1}` : `IP ${post.authorIp || maskedIp()}`, cardX + 64, cardY + 128);
+
+      ctx.strokeStyle = "rgba(29,28,24,.16)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cardX + 64, cardY + 180);
+      ctx.lineTo(cardX + cardW - 64, cardY + 180);
+      ctx.stroke();
+
+      const cleanText = stripTags(post.text).trim();
+      const bodyLength = [...cleanText].length;
+      const bodySize = bodyLength > 150 ? 50 : bodyLength > 105 ? 56 : 64;
+      const bodyLineHeight = Math.round(bodySize * 1.34);
+      ctx.fillStyle = fg;
+      ctx.font = post.style === "board"
+        ? `900 ${bodySize}px 'Segoe Print', 'Comic Sans MS', cursive`
+        : `950 ${bodySize}px Pretendard, Arial, sans-serif`;
+      wrapCanvasText(ctx, cleanText, cardX + 64, cardY + 310, cardW - 128, bodyLineHeight, hasMedia ? 5 : 7);
+
+      if (mediaImage) {
+        drawCoverImage(ctx, mediaImage, cardX + 64, cardY + 770, cardW - 128, 270, 22);
+      } else if (post.media?.type === "video") {
+        drawRoundedRect(ctx, cardX + 64, cardY + 800, cardW - 128, 188, 22, "rgba(29,28,24,.08)");
+        ctx.fillStyle = fg;
+        ctx.font = "900 42px Pretendard, Arial, sans-serif";
+        ctx.fillText("영상 포함", cardX + 110, cardY + 900);
+        ctx.font = "800 26px Pretendard, Arial, sans-serif";
+        ctx.fillStyle = mixColor(fg, "#777777", .38);
+        ctx.fillText(stripTags(post.media.name || "첨부 영상"), cardX + 110, cardY + 945);
+      }
+
+      ctx.strokeStyle = "rgba(29,28,24,.13)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cardX + 64, cardY + cardH - 158);
+      ctx.lineTo(cardX + cardW - 64, cardY + cardH - 158);
+      ctx.stroke();
+
+      drawShareMetric(ctx, cardX + 64, cardY + cardH - 88, "공감", post.likes, fg);
+      drawShareMetric(ctx, cardX + 274, cardY + cardH - 88, "댓글", (post.comments || []).length, fg);
+
+      drawRoundedRect(ctx, 0, footerY, width, 316, 0, "#1d1c18");
+      ctx.fillStyle = "#496c58";
+      ctx.fillRect(0, footerY, width, 10);
+      ctx.fillStyle = "#fffaf0";
+      ctx.font = "950 56px Pretendard, Arial, sans-serif";
+      ctx.fillText("팬들의 문제는 없는가?", 72, footerY + 94);
+      ctx.font = "850 28px Pretendard, Arial, sans-serif";
+      ctx.fillStyle = "rgba(255,250,240,.78)";
+      ctx.fillText("Again2002는 한국 축구의 재부흥과 쇄신을 응원합니다.", 74, footerY + 146);
+      ctx.font = "800 24px Pretendard, Arial, sans-serif";
+      ctx.fillStyle = "rgba(255,250,240,.52)";
+      ctx.fillText("again2002.com", 74, footerY + 220);
+
+      drawRoundedRect(ctx, 760, footerY + 54, 238, 238, 30, "#fffaf0");
+      drawBrandedQrCode(ctx, "https://again2002.com", 791, footerY + 85, 176, logo);
+    }
+
+    function drawShareBackdrop(ctx, width, height) {
       ctx.fillStyle = "#eee8dc";
       ctx.fillRect(0, 0, width, height);
-
-      ctx.strokeStyle = "rgba(73,108,88,.12)";
+      ctx.strokeStyle = "rgba(73,108,88,.095)";
       ctx.lineWidth = 2;
       for (let x = 0; x < width; x += 72) {
         ctx.beginPath();
@@ -2461,116 +2640,26 @@
         ctx.lineTo(width, y);
         ctx.stroke();
       }
-
-      if (logo) {
-        ctx.drawImage(logo, 76, 54, 158, 158);
-      }
-      ctx.fillStyle = "#1d1c18";
-      ctx.font = "900 72px Pretendard, Arial, sans-serif";
-      ctx.fillText("Again 2002", 248, 142);
-      ctx.font = "800 33px Pretendard, Arial, sans-serif";
-      ctx.fillStyle = "#496c58";
-      ctx.fillText("한국 축구, 팬들의 목소리", 252, 194);
-
-      drawRoundedRect(ctx, 82, 345, 916, 1045, 34, bg);
-      ctx.strokeStyle = "rgba(29,28,24,.16)";
+      ctx.strokeStyle = "rgba(29,28,24,.08)";
       ctx.lineWidth = 4;
-      drawRoundedStroke(ctx, 82, 345, 916, 1045, 34);
+      ctx.strokeRect(42, 42, width - 84, height - 84);
+    }
 
-      if (post.style === "board") {
-        ctx.strokeStyle = "rgba(255,255,255,.08)";
-        ctx.lineWidth = 2;
-        for (let x = 130; x < 960; x += 58) {
-          ctx.beginPath();
-          ctx.moveTo(x, 390);
-          ctx.lineTo(x, 1335);
-          ctx.stroke();
-        }
-        for (let y = 410; y < 1335; y += 58) {
-          ctx.beginPath();
-          ctx.moveTo(125, y);
-          ctx.lineTo(955, y);
-          ctx.stroke();
-        }
-      }
-
+    function drawSharePill(ctx, x, y, width, height, label, bg, fg) {
+      drawRoundedRect(ctx, x, y, width, height, height / 2, bg);
       ctx.fillStyle = fg;
-      ctx.font = "900 34px Pretendard, Arial, sans-serif";
-      ctx.fillText(stripTags(post.authorName || "익명팬"), 135, 430);
-
-      const category = categoryName(post.category);
-      const categoryEmoji = categoryIcon(post.category);
-      ctx.font = "900 24px Pretendard, Arial, sans-serif";
-      const labelWidth = ctx.measureText(category).width;
-      const pillWidth = Math.max(132, labelWidth + 82);
-      const pillX = 945 - pillWidth;
-      drawRoundedRect(ctx, pillX, 394, pillWidth, 44, 12, "rgba(29,28,24,.08)");
-      ctx.strokeStyle = "rgba(29,28,24,.1)";
-      ctx.lineWidth = 2;
-      drawRoundedStroke(ctx, pillX, 394, pillWidth, 44, 12);
-      drawRoundedRect(ctx, pillX + 9, 401, 30, 30, 9, "rgba(255,250,240,.62)");
-      ctx.font = "900 20px 'Segoe UI Emoji', 'Apple Color Emoji', Pretendard, sans-serif";
+      ctx.font = "950 20px Pretendard, Arial, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillStyle = fg;
-      ctx.fillText(categoryEmoji, pillX + 24, 423);
-      ctx.font = "900 24px Pretendard, Arial, sans-serif";
-      ctx.fillStyle = fg;
-      ctx.fillText(category, pillX + 39 + (pillWidth - 48) / 2, 424);
+      ctx.fillText(label, x + width / 2, y + 34);
       ctx.textAlign = "left";
+    }
 
-      ctx.font = "800 25px Pretendard, Arial, sans-serif";
-      ctx.fillStyle = mixColor(fg, "#777777", .38);
-      ctx.fillText(isMemberAuthor(post) ? `Lv.${post.authorLevel || 1}` : `IP ${post.authorIp || maskedIp()}`, 135, 470);
-
-      ctx.strokeStyle = "rgba(29,28,24,.16)";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(135, 522);
-      ctx.lineTo(945, 522);
-      ctx.stroke();
-
-      ctx.fillStyle = fg;
-      ctx.font = post.style === "board"
-        ? "900 58px 'Segoe Print', 'Comic Sans MS', cursive"
-        : "900 58px Pretendard, Arial, sans-serif";
-      wrapCanvasText(ctx, stripTags(post.text), 135, 625, 810, 78, hasMedia ? 4 : 7);
-
-      if (mediaImage) {
-        drawCoverImage(ctx, mediaImage, 135, 900, 810, 260, 22);
-      } else if (post.media?.type === "video") {
-        drawRoundedRect(ctx, 135, 900, 810, 170, 22, "rgba(29,28,24,.08)");
-        ctx.fillStyle = fg;
-        ctx.font = "900 42px Pretendard, Arial, sans-serif";
-        ctx.fillText("영상 포함", 180, 985);
-        ctx.font = "800 26px Pretendard, Arial, sans-serif";
-        ctx.fillStyle = mixColor(fg, "#777777", .38);
-        ctx.fillText(stripTags(post.media.name || "첨부 영상"), 180, 1030);
-      }
-
-      ctx.strokeStyle = "rgba(29,28,24,.13)";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(135, 1208);
-      ctx.lineTo(945, 1208);
-      ctx.stroke();
-
-      ctx.font = "900 38px Pretendard, Arial, sans-serif";
-      ctx.fillStyle = fg;
-      ctx.fillText(`공감 ${post.likes}`, 135, 1285);
-      ctx.fillText(`댓글 ${(post.comments || []).length}`, 360, 1285);
-
-      ctx.fillStyle = "#1d1c18";
-      ctx.font = "900 56px Pretendard, Arial, sans-serif";
-      ctx.fillText("팬들의 문제는 없는가?", 90, 1600);
-      ctx.font = "800 27px Pretendard, Arial, sans-serif";
-      ctx.fillStyle = "#716c61";
-      ctx.fillText("Again2002는 한국 축구의 재 부흥과 쇄신을 응원합니다.", 92, 1662);
-      ctx.font = "800 25px Pretendard, Arial, sans-serif";
-      ctx.fillStyle = "#8a8377";
-      ctx.fillText("이 카드는 Again2002에서 공유되었습니다.", 92, 1704);
-
-      drawRoundedRect(ctx, 740, 1490, 240, 240, 30, "#fffaf0");
-      drawBrandedQrCode(ctx, "https://again2002.com", 770, 1520, 180, logo);
+    function drawShareMetric(ctx, x, y, label, value, color) {
+      ctx.fillStyle = mixColor(color, "#1d1c18");
+      ctx.font = "950 32px Pretendard, Arial, sans-serif";
+      ctx.fillText(label, x, y);
+      ctx.font = "950 44px Pretendard, Arial, sans-serif";
+      ctx.fillText(String(value), x + 82, y + 2);
     }
 
     function drawRoundedRect(ctx, x, y, width, height, radius, fill) {
