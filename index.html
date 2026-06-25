@@ -186,15 +186,44 @@
       justify-content: flex-end;
     }
 
-    .theme-toggle {
+    .signup-cta {
       min-height: 38px;
-      padding: 0 12px;
+      padding: 0 14px;
+      border: 1px solid rgba(73,108,88,.2);
+      border-radius: 999px;
+      background: var(--green);
+      color: #fff;
+      font-weight: 950;
+      box-shadow: var(--shadow);
+      white-space: nowrap;
+    }
+
+    .theme-toggle {
+      display: inline-grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
       border: 1px solid var(--line);
       border-radius: 999px;
       background: rgba(255,255,255,.62);
       color: var(--ink);
-      font-weight: 950;
       box-shadow: var(--shadow);
+    }
+
+    .theme-toggle svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+
+    :root[data-theme="dark"] .signup-cta {
+      background: #f3efe5;
+      color: #151613;
+      border-color: rgba(243,239,229,.34);
     }
 
     :root[data-theme="dark"] .theme-toggle,
@@ -900,8 +929,9 @@
         </p>
       </div>
       <div class="top-actions">
-        <button class="theme-toggle" id="themeToggle" type="button">다크모드</button>
-        <div class="live-chip"><span class="dot"></span><span id="liveCount">현재 1명 접속 중</span></div>
+        <button class="signup-cta" id="signupShortcut" type="button">회원가입</button>
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="다크모드로 전환" title="다크모드"></button>
+        <div class="live-chip"><span class="dot"></span><span id="liveCount">1명 접속 중</span></div>
       </div>
     </header>
 
@@ -999,7 +1029,7 @@
           <ul class="goal-list" id="goals"></ul>
         </section>
 
-        <section class="panel">
+        <section class="panel" id="accountPanel">
           <div class="panel-header">
             <h2>계정</h2>
             <span class="mini" id="accountMode">비로그인</span>
@@ -1077,6 +1107,7 @@
     const textColorInput = document.querySelector("#textColor");
     const clearFilter = document.querySelector("#clearFilter");
     const themeToggle = document.querySelector("#themeToggle");
+    const signupShortcut = document.querySelector("#signupShortcut");
 
     applyStoredTheme();
     hydrateComposerAccount();
@@ -1099,6 +1130,15 @@
     themeToggle.addEventListener("click", () => {
       const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
       setTheme(next);
+    });
+
+    signupShortcut.addEventListener("click", () => {
+      setMode("member");
+      document.querySelector("#accountPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+      requestAnimationFrame(() => {
+        const accountNick = document.querySelector("#accountNick");
+        if (accountNick) accountNick.focus({ preventScroll: true });
+      });
     });
 
     clearFilter.addEventListener("click", () => {
@@ -1749,7 +1789,7 @@
         ? `실시간 접속 ${online.toLocaleString("ko-KR")}명`
         : "현재 이 브라우저 1명 접속 중";
       document.querySelector("#heatLabel").textContent = heat > 78 ? "매우 활발" : heat > 52 ? "활발" : "조용함";
-      document.querySelector("#liveCount").textContent = `현재 ${online.toLocaleString("ko-KR")}명 접속 중`;
+      document.querySelector("#liveCount").textContent = `${online.toLocaleString("ko-KR")}명 접속 중`;
       document.querySelector("#feedMeta").textContent = `오늘 ${todaysPosts.length}개 · 댓글 ${commentCount}개`;
     }
 
@@ -2267,7 +2307,12 @@
       const normalized = theme === "dark" ? "dark" : "light";
       document.documentElement.dataset.theme = normalized === "dark" ? "dark" : "";
       if (normalized === "light") document.documentElement.removeAttribute("data-theme");
-      themeToggle.textContent = normalized === "dark" ? "라이트모드" : "다크모드";
+      const nextLabel = normalized === "dark" ? "라이트모드로 전환" : "다크모드로 전환";
+      themeToggle.setAttribute("aria-label", nextLabel);
+      themeToggle.setAttribute("title", normalized === "dark" ? "라이트모드" : "다크모드");
+      themeToggle.innerHTML = normalized === "dark"
+        ? `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`
+        : `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.4A7.6 7.6 0 0 1 9.6 4 8.7 8.7 0 1 0 20 14.4Z"></path></svg>`;
       localStorage.setItem(themeKey, normalized);
       applyStyleDefaults(selectedStyle);
     }
