@@ -2336,13 +2336,22 @@
       ctx.fillStyle = "#716c61";
       ctx.fillText("이 카드는 Again 2002에서 공유되었습니다.", 92, 1600);
 
-      drawRoundedRect(ctx, 90, 1690, 900, 94, 47, "#496c58");
+      drawRoundedRect(ctx, 90, 1682, 612, 116, 30, "rgba(255,255,255,.54)");
       if (logo) {
-        ctx.drawImage(logo, 315, 1708, 56, 56);
+        ctx.drawImage(logo, 118, 1702, 76, 76);
       }
-      ctx.fillStyle = "#fffaf0";
-      ctx.font = "900 34px Pretendard, Arial, sans-serif";
-      ctx.fillText("again2002.com", logo ? 390 : 380, 1750);
+      ctx.fillStyle = "#1d1c18";
+      ctx.font = "900 36px Pretendard, Arial, sans-serif";
+      ctx.fillText("Again 2002", logo ? 214 : 122, 1732);
+      ctx.font = "800 28px Pretendard, Arial, sans-serif";
+      ctx.fillStyle = "#496c58";
+      ctx.fillText("again2002.com", logo ? 216 : 122, 1770);
+
+      drawRoundedRect(ctx, 744, 1668, 236, 236, 28, "#fffaf0");
+      drawQrCode(ctx, "https://again2002.com", 774, 1698, 176);
+      ctx.fillStyle = "#716c61";
+      ctx.font = "800 22px Pretendard, Arial, sans-serif";
+      ctx.fillText("스캔해서 보기", 786, 1880);
     }
 
     function drawRoundedRect(ctx, x, y, width, height, radius, fill) {
@@ -2370,6 +2379,184 @@
       ctx.strokeStyle = "rgba(29,28,24,.13)";
       ctx.lineWidth = 3;
       drawRoundedStroke(ctx, x, y, width, height, radius);
+    }
+
+    function drawQrCode(ctx, text, x, y, size) {
+      const matrix = makeQrMatrix(text);
+      const count = matrix.length;
+      const cell = Math.floor(size / count);
+      const offset = Math.floor((size - cell * count) / 2);
+      ctx.fillStyle = "#fffaf0";
+      ctx.fillRect(x, y, size, size);
+      ctx.fillStyle = "#1d1c18";
+      matrix.forEach((row, rowIndex) => {
+        row.forEach((value, colIndex) => {
+          if (value) ctx.fillRect(x + offset + colIndex * cell, y + offset + rowIndex * cell, cell, cell);
+        });
+      });
+    }
+
+    function makeQrMatrix(text) {
+      const version = 2;
+      const size = 25;
+      const dataCodewords = 34;
+      const ecCodewords = 10;
+      const matrix = Array.from({ length: size }, () => Array(size).fill(null));
+      const reserved = Array.from({ length: size }, () => Array(size).fill(false));
+
+      const setModule = (row, col, value, reserve = true) => {
+        if (row < 0 || col < 0 || row >= size || col >= size) return;
+        matrix[row][col] = !!value;
+        if (reserve) reserved[row][col] = true;
+      };
+
+      const addFinder = (row, col) => {
+        for (let r = -1; r <= 7; r += 1) {
+          for (let c = -1; c <= 7; c += 1) {
+            const rr = row + r;
+            const cc = col + c;
+            if (rr < 0 || cc < 0 || rr >= size || cc >= size) continue;
+            const inBorder = r === 0 || r === 6 || c === 0 || c === 6;
+            const inCenter = r >= 2 && r <= 4 && c >= 2 && c <= 4;
+            setModule(rr, cc, inBorder || inCenter);
+          }
+        }
+      };
+
+      addFinder(0, 0);
+      addFinder(0, size - 7);
+      addFinder(size - 7, 0);
+
+      for (let i = 8; i < size - 8; i += 1) {
+        setModule(6, i, i % 2 === 0);
+        setModule(i, 6, i % 2 === 0);
+      }
+
+      for (let r = -2; r <= 2; r += 1) {
+        for (let c = -2; c <= 2; c += 1) {
+          const rr = 18 + r;
+          const cc = 18 + c;
+          const edge = Math.max(Math.abs(r), Math.abs(c));
+          setModule(rr, cc, edge === 2 || edge === 0);
+        }
+      }
+
+      setModule(4 * version + 9, 8, true);
+      for (let i = 0; i < 9; i += 1) {
+        if (i !== 6) {
+          reserved[8][i] = true;
+          reserved[i][8] = true;
+        }
+      }
+      for (let i = 0; i < 8; i += 1) {
+        reserved[8][size - 1 - i] = true;
+        reserved[size - 1 - i][8] = true;
+      }
+
+      const data = qrDataCodewords(text, dataCodewords);
+      const codewords = data.concat(qrErrorCodewords(data, ecCodewords));
+      const bits = codewords.flatMap((codeword) => {
+        return Array.from({ length: 8 }, (_, i) => ((codeword >> (7 - i)) & 1) === 1);
+      });
+
+      let bitIndex = 0;
+      let upward = true;
+      for (let col = size - 1; col > 0; col -= 2) {
+        if (col === 6) col -= 1;
+        for (let step = 0; step < size; step += 1) {
+          const row = upward ? size - 1 - step : step;
+          for (let dx = 0; dx < 2; dx += 1) {
+            const cc = col - dx;
+            if (reserved[row][cc]) continue;
+            const raw = bits[bitIndex] || false;
+            const masked = raw !== ((row + cc) % 2 === 0);
+            setModule(row, cc, masked, false);
+            bitIndex += 1;
+          }
+        }
+        upward = !upward;
+      }
+
+      const formatBits = 0b111011111000100;
+      for (let i = 0; i <= 5; i += 1) setModule(8, i, ((formatBits >> i) & 1) === 1);
+      setModule(8, 7, ((formatBits >> 6) & 1) === 1);
+      setModule(8, 8, ((formatBits >> 7) & 1) === 1);
+      setModule(7, 8, ((formatBits >> 8) & 1) === 1);
+      for (let i = 9; i < 15; i += 1) setModule(14 - i, 8, ((formatBits >> i) & 1) === 1);
+      for (let i = 0; i < 8; i += 1) setModule(size - 1 - i, 8, ((formatBits >> i) & 1) === 1);
+      for (let i = 8; i < 15; i += 1) setModule(8, size - 15 + i, ((formatBits >> i) & 1) === 1);
+
+      return matrix.map((row) => row.map(Boolean));
+    }
+
+    function qrDataCodewords(text, capacity) {
+      const bytes = Array.from(new TextEncoder().encode(text));
+      const bits = [0, 1, 0, 0];
+      for (let i = 7; i >= 0; i -= 1) bits.push(((bytes.length >> i) & 1) === 1);
+      bytes.forEach((byte) => {
+        for (let i = 7; i >= 0; i -= 1) bits.push(((byte >> i) & 1) === 1);
+      });
+      const maxBits = capacity * 8;
+      for (let i = 0; i < 4 && bits.length < maxBits; i += 1) bits.push(false);
+      while (bits.length % 8 !== 0) bits.push(false);
+      const codewords = [];
+      for (let i = 0; i < bits.length; i += 8) {
+        let value = 0;
+        for (let j = 0; j < 8; j += 1) value = (value << 1) | (bits[i + j] ? 1 : 0);
+        codewords.push(value);
+      }
+      const pads = [0xec, 0x11];
+      let padIndex = 0;
+      while (codewords.length < capacity) {
+        codewords.push(pads[padIndex % 2]);
+        padIndex += 1;
+      }
+      return codewords.slice(0, capacity);
+    }
+
+    function qrErrorCodewords(data, ecCount) {
+      const generator = qrGeneratorPolynomial(ecCount);
+      const message = data.concat(Array(ecCount).fill(0));
+      data.forEach((_, i) => {
+        const factor = message[i];
+        if (factor === 0) return;
+        generator.forEach((coefficient, j) => {
+          message[i + j] ^= qrGfMultiply(coefficient, factor);
+        });
+      });
+      return message.slice(message.length - ecCount);
+    }
+
+    function qrGeneratorPolynomial(degree) {
+      let poly = [1];
+      for (let i = 0; i < degree; i += 1) {
+        const next = Array(poly.length + 1).fill(0);
+        poly.forEach((coefficient, index) => {
+          next[index] ^= qrGfMultiply(coefficient, 1);
+          next[index + 1] ^= qrGfMultiply(coefficient, qrGfPow(i));
+        });
+        poly = next;
+      }
+      return poly;
+    }
+
+    function qrGfPow(power) {
+      let value = 1;
+      for (let i = 0; i < power; i += 1) value = qrGfMultiply(value, 2);
+      return value;
+    }
+
+    function qrGfMultiply(a, b) {
+      let result = 0;
+      let left = a;
+      let right = b;
+      while (right > 0) {
+        if (right & 1) result ^= left;
+        left <<= 1;
+        if (left & 0x100) left ^= 0x11d;
+        right >>= 1;
+      }
+      return result & 0xff;
     }
 
     function roundedPath(ctx, x, y, width, height, radius) {
