@@ -822,34 +822,8 @@
       font-weight: 900;
     }
 
-    .card-signature {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      padding-top: 2px;
-      color: color-mix(in srgb, var(--card-fg, #1d1c18) 70%, transparent);
-      font-size: .74rem;
-      font-weight: 950;
-    }
-
-    .card-stats {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      min-height: 27px;
-      min-width: 152px;
-      padding: 0 8px;
-      border: 1px solid rgba(29,28,24,.1);
-      border-radius: 999px;
-      background: rgba(255,255,255,.24);
-      white-space: nowrap;
-    }
-
     :root[data-theme="dark"] .category-chip,
-    :root[data-theme="dark"] .card-time,
-    :root[data-theme="dark"] .card-stats {
+    :root[data-theme="dark"] .card-time {
       border-color: rgba(243,239,229,.14);
       background: rgba(255,255,255,.08);
     }
@@ -1220,15 +1194,6 @@
         justify-self: start;
       }
 
-      .card-signature {
-        align-items: center;
-      }
-
-      .card-stats {
-        align-self: stretch;
-        justify-content: center;
-      }
-
       .split {
         grid-template-columns: 1fr;
       }
@@ -1594,7 +1559,7 @@
         authorBase: author.base,
         authorName: author.name,
         authorType: author.type,
-        authorIp: author.ip,
+        authorIp: author.type === "member" ? "" : author.ip,
         authorLevel: author.level || 0,
         authorVerified: author.verified === true,
         style: selectedStyle,
@@ -2134,11 +2099,15 @@
         if (post.authorId === account.id) {
           post.authorLevel = account.level;
           post.authorVerified = true;
+          post.authorType = "member";
+          post.authorIp = "";
         }
         post.comments.forEach((comment) => {
           if (comment.authorId === account.id) {
             comment.authorLevel = account.level;
             comment.authorVerified = true;
+            comment.authorType = "member";
+            comment.authorIp = "";
           }
         });
       });
@@ -2270,7 +2239,7 @@
             authorBase: author.base,
             authorName: author.name,
             authorType: author.type,
-            authorIp: author.ip,
+            authorIp: author.type === "member" ? "" : author.ip,
             authorLevel: author.level || 0,
             authorVerified: author.verified === true,
             text: censor(text),
@@ -2315,9 +2284,6 @@
               <p class="message">${post.text}</p>
             </div>
             ${mediaTemplate(post.media)}
-            <div class="card-signature">
-              <span class="card-stats">공감 ${post.likes} · 댓글 ${comments.length}</span>
-            </div>
           </div>
           <div class="card-actions">
             <button class="react like-btn" type="button">공감 ${post.likes}</button>
@@ -2381,11 +2347,15 @@
 
     function authorLabel(author) {
       const name = escapeHtml(author.authorName || "익명팬");
-      if (author.authorVerified || author.authorType === "member") {
+      if (isMemberAuthor(author)) {
         const level = Math.max(1, Number(author.authorLevel || 1));
         return `<span class="${levelClass(level)}">${name}</span><span class="level-tag">Lv.${level}</span>`;
       }
       return `${name}<span class="ip-tag">IP ${escapeHtml(author.authorIp || maskedIp())}</span>`;
+    }
+
+    function isMemberAuthor(author) {
+      return author?.authorVerified === true || author?.authorType === "member";
     }
 
     async function sharePostImage(post) {
@@ -2550,7 +2520,7 @@
 
       ctx.font = "800 25px Pretendard, Arial, sans-serif";
       ctx.fillStyle = mixColor(fg, "#777777", .38);
-      ctx.fillText(post.authorType === "member" ? `Lv.${post.authorLevel || 1}` : `IP ${post.authorIp || maskedIp()}`, 135, 470);
+      ctx.fillText(isMemberAuthor(post) ? `Lv.${post.authorLevel || 1}` : `IP ${post.authorIp || maskedIp()}`, 135, 470);
 
       ctx.strokeStyle = "rgba(29,28,24,.16)";
       ctx.lineWidth = 3;
@@ -3077,7 +3047,7 @@
         author_base: post.authorBase,
         author_name: post.authorName,
         author_type: post.authorType || "guest",
-        author_ip: post.authorIp || "",
+        author_ip: isMemberAuthor(post) ? "" : (post.authorIp || ""),
         author_level: post.authorLevel || 0,
         author_verified: post.authorVerified === true,
         style: post.style,
@@ -3105,7 +3075,7 @@
         authorBase: post.author_base,
         authorName: post.author_name,
         authorType: post.author_type || "guest",
-        authorIp: post.author_ip || "",
+        authorIp: (post.author_type === "member" || post.author_verified === true) ? "" : (post.author_ip || ""),
         authorLevel: post.author_level || 0,
         authorVerified: post.author_verified === true,
         style: post.style,
@@ -3133,7 +3103,7 @@
         author_base: comment.authorBase,
         author_name: comment.authorName,
         author_type: comment.authorType || "guest",
-        author_ip: comment.authorIp || "",
+        author_ip: isMemberAuthor(comment) ? "" : (comment.authorIp || ""),
         author_level: comment.authorLevel || 0,
         author_verified: comment.authorVerified === true,
         body_html: comment.text,
@@ -3148,7 +3118,7 @@
         authorBase: comment.author_base,
         authorName: comment.author_name,
         authorType: comment.author_type || "guest",
-        authorIp: comment.author_ip || "",
+        authorIp: (comment.author_type === "member" || comment.author_verified === true) ? "" : (comment.author_ip || ""),
         authorLevel: comment.author_level || 0,
         authorVerified: comment.author_verified === true,
         text: comment.body_html,
