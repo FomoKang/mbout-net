@@ -74,11 +74,14 @@ In Supabase:
 Authentication -> Settings -> SMTP Settings
 Enable Custom SMTP
 Enable email confirmations when Resend is verified
+Authentication -> URL Configuration
 Site URL: https://again2002.com
 Redirect URLs:
 https://again2002.com
 https://www.again2002.com
 ```
+
+If email confirmation opens `localhost` or `null`, check the URL Configuration above first. The app also sends `emailRedirectTo` as `https://again2002.com/` when opened from a local file.
 
 ## Before Large Traffic
 

@@ -1488,7 +1488,7 @@
         const email = String(options.email || "").trim();
         const displayName = normalizeDisplayName(options.displayName || base);
         if (!/^[a-zA-Z0-9_]{3,16}$/.test(base)) return { ok: false, message: "아이디는 영문/숫자/_ 3~16자로 해주세요." };
-        if (!displayName) return { ok: false, message: "이름을 입력해주세요." };
+        if (!displayName) return { ok: false, message: "닉네임을 입력해주세요." };
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, message: "이메일을 정확히 입력해주세요." };
 
         const duplicate = await serviceClient
@@ -1502,6 +1502,7 @@
           email,
           password,
           options: {
+            emailRedirectTo: authRedirectUrl(),
             data: {
               username: base,
               display_name: displayName
@@ -1510,7 +1511,7 @@
         });
 
         if (error) return { ok: false, message: error.message };
-        if (!data.session) return { ok: true, pendingEmail: true, message: "인증 메일을 보냈습니다. 메일 확인 후 로그인해주세요." };
+        if (!data.session) return { ok: true, pendingEmail: true, message: "인증 메일을 보냈습니다. 메일 링크를 누른 뒤 Again 2002로 돌아와 로그인해주세요." };
 
         const account = await accountFromUser(data.user);
         return { ok: true, account };
@@ -1540,6 +1541,41 @@
       const account = loadAccount(base, accountHash(base, password));
       if (!account) return { ok: false, message: "계정이 없거나 비밀번호가 다릅니다." };
       return { ok: true, account };
+    }
+
+    function authRedirectUrl() {
+      const origin = window.location.origin;
+      const host = window.location.hostname || "";
+      if (host === "again2002.com" || host === "www.again2002.com") return `${origin}/`;
+      if (!origin || origin === "null" || origin.startsWith("file:")) return "https://again2002.com/";
+      return "https://again2002.com/";
+    }
+
+    function handleAuthReturnNotice() {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const searchParams = new URLSearchParams(window.location.search);
+      const hasAuthSignal = searchParams.has("code")
+        || searchParams.has("type")
+        || searchParams.has("error")
+        || hashParams.has("access_token")
+        || hashParams.has("type")
+        || hashParams.has("error");
+
+      if (!hasAuthSignal) return;
+
+      const rawError = searchParams.get("error_description") || hashParams.get("error_description");
+      setMode("member");
+      if (rawError) {
+        showToast(rawError.replace(/\+/g, " "));
+      } else {
+        const message = "이메일 인증이 완료됐습니다. 계정 패널에서 로그인해주세요.";
+        notice.textContent = message;
+        showToast(message);
+      }
+
+      if (window.history?.replaceState) {
+        window.history.replaceState({}, document.title, window.location.pathname || "/");
+      }
     }
 
     function normalizeDisplayName(raw) {
@@ -1579,8 +1615,8 @@
         id: `auth-${user.id}`,
         authId: user.id,
         source: "remote",
-        nick: profile?.username || normalizeNick(metadata.username || user.email?.split("@")[0] || "fan"),
-        displayName: profile?.display_name || normalizeDisplayName(metadata.display_name || ""),
+        username: normalizeNick(profile?.username || metadata.username || user.email?.split("@")[0] || "fan"),
+        nick: normalizeDisplayName(profile?.display_name || metadata.display_name || profile?.username || user.email?.split("@")[0] || "fan"),
         email: user.email || "",
         level: profile?.level || 1,
         xp: profile?.xp || 0,
@@ -1804,6 +1840,7 @@
         const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm");
         serviceClient = createClient(serviceConfig.supabaseUrl, serviceConfig.supabaseAnonKey);
         await initAuth();
+        handleAuthReturnNotice();
         initPresence(serviceClient);
         await loadRemoteFeed();
         subscribeRemoteFeed();
@@ -2074,7 +2111,7 @@
         accountBox.innerHTML = `
           <div class="account-item">
             <strong><span class="${levelClass(account.level)}">${account.nick}</span> Lv.${account.level}</strong>
-            <span>${account.source === "remote" ? `${account.displayName || "이름 미입력"} · ${account.email}` : "로컬 계정"} · EXP ${account.xp}/${needed} · ${levelTitle(account.level)}</span>
+            <span>${account.source === "remote" ? `@${account.username || "fan"} · ${account.email}` : "로컬 계정"} · EXP ${account.xp}/${needed} · ${levelTitle(account.level)}</span>
             <div class="xp-bar"><span style="width:${percent}%"></span></div>
           </div>
           <div class="account-form">
@@ -2132,7 +2169,7 @@
 
       return `
         <input id="accountNick" maxlength="16" placeholder="아이디 영문/숫자/_" autocomplete="username" value="${escapeAttr(nick)}" />
-        <input id="accountName" maxlength="16" placeholder="이름" autocomplete="name" />
+        <input id="accountDisplayName" maxlength="16" placeholder="닉네임" autocomplete="nickname" />
         <input id="accountEmail" type="email" maxlength="80" placeholder="이메일" autocomplete="email" />
         <input id="accountPassword" type="password" maxlength="48" placeholder="비밀번호 6자 이상" autocomplete="current-password" />
       `;
@@ -2140,7 +2177,7 @@
 
     function bindAccountForm() {
       const accountNick = document.querySelector("#accountNick");
-      const accountName = document.querySelector("#accountName");
+      const accountDisplayName = document.querySelector("#accountDisplayName");
       const accountEmail = document.querySelector("#accountEmail");
       const accountPassword = document.querySelector("#accountPassword");
       if (!accountNick || !accountPassword) return;
@@ -2151,7 +2188,7 @@
 
       document.querySelector("#createAccount").addEventListener("click", async () => {
         const result = await createMemberAccount(accountNick.value, accountPassword.value.trim(), {
-          displayName: accountName?.value,
+          displayName: accountDisplayName?.value,
           email: accountEmail?.value
         });
         if (!result.ok) {
