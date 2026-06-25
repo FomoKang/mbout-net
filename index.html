@@ -146,28 +146,10 @@
       text-decoration: none;
     }
 
-    .brand-title {
-      display: inline-flex;
-      align-items: center;
-      gap: clamp(10px, 1.4vw, 16px);
-    }
-
-    .brand-logo {
-      width: clamp(58px, 8vw, 108px);
-      height: clamp(58px, 8vw, 108px);
-      object-fit: contain;
-      flex: 0 0 auto;
-      filter: drop-shadow(0 8px 14px rgba(29,28,24,.14));
-    }
-
     .home-link:hover {
       text-decoration: underline;
       text-decoration-thickness: .08em;
       text-underline-offset: .08em;
-    }
-
-    .brand-title:hover {
-      text-decoration: none;
     }
 
     .lead {
@@ -1024,12 +1006,7 @@
   <main class="app">
     <header class="topbar">
       <div class="brand">
-        <h1>
-          <a class="home-link brand-title" href="./index.html" aria-label="Again 2002 홈">
-            <img class="brand-logo" src="./assets/again2002-logo.png" alt="" />
-            <span>Again 2002</span>
-          </a>
-        </h1>
+        <h1><a class="home-link" href="./index.html" aria-label="Again 2002 홈">Again 2002</a></h1>
         <p class="lead">
           <span>한국 축구, 팬들의 문제는 없는가?</span>
           <span>팬들의 목소리를 들어보겠습니다.</span>
