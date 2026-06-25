@@ -29,7 +29,7 @@ git push origin main
 ## Supabase
 
 Run `supabase-schema.sql` in the Supabase SQL Editor.
-Run it again after updates too; it safely adds new columns such as `posts.category`.
+Run it again after updates too; it safely adds new columns such as `posts.category` and post media fields.
 
 `again.config.js` must contain:
 
@@ -46,6 +46,7 @@ The site uses:
 - `public.profiles` for internal username, visible nickname, level, and EXP.
 - Supabase Presence for live connected browser count.
 - Supabase Postgres for shared posts, comments, and likes.
+- 5MB-or-smaller image/video attachments stored with posts for MVP testing.
 - Supabase Realtime to refresh the feed across users.
 - Canvas-generated 9:16 card images for Instagram/TikTok-style sharing.
 - `public.reports` for small in-card moderation reports.

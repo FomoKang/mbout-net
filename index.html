@@ -367,6 +367,17 @@
       padding: 4px;
     }
 
+    input[type="file"] {
+      padding: 9px 10px;
+    }
+
+    .media-note {
+      color: var(--muted);
+      font-size: .76rem;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
     .split {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -645,6 +656,32 @@
       border-radius: 6px;
       background: rgba(25,28,35,.12);
       color: currentColor;
+    }
+
+    .card-media {
+      margin: 0 15px 14px;
+      overflow: hidden;
+      border: 1px solid rgba(25,28,35,.11);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.3);
+    }
+
+    .card-media img,
+    .card-media video {
+      display: block;
+      width: 100%;
+      max-height: 260px;
+      object-fit: cover;
+    }
+
+    .media-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 7px 10px;
+      color: color-mix(in srgb, var(--card-fg, #1d1c18) 78%, transparent);
+      font-size: .8rem;
+      font-weight: 900;
     }
 
     .card-actions {
@@ -1047,6 +1084,11 @@
             <textarea id="message" maxlength="180" placeholder="오늘 경기에서 팬들이 답답했던 지점, 감독 운영, 선수 기용, 응원 문화까지 자유롭게 적어주세요."></textarea>
           </div>
           <div class="field">
+            <label for="mediaFile">사진/영상</label>
+            <input id="mediaFile" type="file" accept="image/*,video/*" />
+            <span class="media-note" id="mediaStatus">선택 사항 · 5MB 이하</span>
+          </div>
+          <div class="field">
             <label>카테고리</label>
             <div class="category-row" id="categoryRow">
               <button type="button" class="active" data-category="sad">슬픔</button>
@@ -1151,6 +1193,7 @@
     const goalAwardKey = "again2002-goal-awards-v1";
     const reportKey = "again2002-reports-v1";
     const logoAsset = "./assets/again2002-logo.png";
+    const maxMediaBytes = 5 * 1024 * 1024;
     const serviceConfig = {
       supabaseUrl: String(globalThis.AGAIN2002_CONFIG?.supabaseUrl || "").trim(),
       supabaseAnonKey: String(globalThis.AGAIN2002_CONFIG?.supabaseAnonKey || "").trim()
@@ -1215,6 +1258,8 @@
     const nicknameField = document.querySelector("#nicknameField");
     const passwordField = document.querySelector("#passwordField");
     const composerAccount = document.querySelector("#composerAccount");
+    const mediaInput = document.querySelector("#mediaFile");
+    const mediaStatus = document.querySelector("#mediaStatus");
     const bgColorInput = document.querySelector("#bgColor");
     const textColorInput = document.querySelector("#textColor");
     const clearFilter = document.querySelector("#clearFilter");
@@ -1269,6 +1314,25 @@
       input.addEventListener("input", () => renderAccount());
     });
 
+    mediaInput.addEventListener("change", () => {
+      const file = mediaInput.files?.[0];
+      if (!file) {
+        mediaStatus.textContent = "선택 사항 · 5MB 이하";
+        return;
+      }
+      if (!isAllowedMedia(file)) {
+        mediaStatus.textContent = "사진 또는 영상 파일만 올릴 수 있습니다.";
+        mediaInput.value = "";
+        return;
+      }
+      if (file.size > maxMediaBytes) {
+        mediaStatus.textContent = "5MB 이하 파일만 올릴 수 있습니다.";
+        mediaInput.value = "";
+        return;
+      }
+      mediaStatus.textContent = `${file.name} · ${formatBytes(file.size)}`;
+    });
+
     postForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const rawText = document.querySelector("#message").value.trim();
@@ -1292,6 +1356,13 @@
       }
       const author = resolveAuthor(nicknameInput.value.trim() || "익명팬", password, currentMode);
       const colors = currentStyleDefaults()[selectedStyle] || currentStyleDefaults().paper;
+      let media = null;
+      try {
+        media = await readSelectedMedia();
+      } catch {
+        showToast("첨부 파일을 읽을 수 없습니다.");
+        return;
+      }
       const post = {
         id: makeId(),
         authorId: author.id,
@@ -1306,6 +1377,7 @@
         bgColor: safeHex(bgColorInput.value, colors.bg),
         textColor: safeHex(textColorInput.value, colors.fg),
         text: censor(rawText),
+        media,
         likes: 0,
         comments: [],
         createdAt: Date.now()
@@ -1321,6 +1393,7 @@
       document.querySelectorAll("#styleRow button").forEach((item) => item.classList.toggle("active", item.dataset.style === "paper"));
       document.querySelectorAll("#categoryRow button").forEach((item) => item.classList.toggle("active", item.dataset.category === "sad"));
       applyStyleDefaults("paper");
+      mediaStatus.textContent = "선택 사항 · 5MB 이하";
       notice.textContent = `${author.name}으로 올라갔습니다.`;
       showToast("피드에 올라갔습니다.");
       render();
@@ -1390,6 +1463,7 @@
         bgColor: remapLegacyColor(post.bgColor || "#f8f3e7"),
         textColor: remapLegacyColor(post.textColor || "#1d1c18"),
         text: post.text || "",
+        media: null,
         likes: Array.isArray(post.reactions) ? post.reactions[0] || 0 : 0,
         comments: [],
         createdAt: post.createdAt || Date.now()
@@ -1416,6 +1490,7 @@
           bgColor: safeHex(remapLegacyColor(post.bgColor), colors.bg),
           textColor: safeHex(remapLegacyColor(post.textColor), colors.fg),
           text: post.text || "",
+          media: normalizeMedia(post.media),
           likes: Number.isFinite(post.likes) ? post.likes : 0,
           comments: Array.isArray(post.comments) ? post.comments.map(normalizeComment) : [],
           createdAt: post.createdAt || Date.now()
@@ -1439,8 +1514,28 @@
       };
     }
 
+    function normalizeMedia(media) {
+      if (!media || typeof media !== "object") return null;
+      const type = media.type === "video" ? "video" : media.type === "image" ? "image" : "";
+      const url = String(media.url || "");
+      if (!type || !url.startsWith("data:")) return null;
+      return {
+        type,
+        url,
+        name: escapeHtml(media.name || (type === "video" ? "첨부 영상" : "첨부 사진")),
+        size: Number.isFinite(media.size) ? media.size : 0
+      };
+    }
+
     function savePosts() {
-      localStorage.setItem(storageKey, JSON.stringify(posts));
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(posts));
+      } catch {
+        const lightweightPosts = posts.map((post) => ({ ...post, media: null }));
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(lightweightPosts));
+        } catch {}
+      }
     }
 
     function resolveAuthor(rawBase, password, mode) {
@@ -1857,6 +1952,37 @@
       return output;
     }
 
+    function isAllowedMedia(file) {
+      return file && (file.type.startsWith("image/") || file.type.startsWith("video/"));
+    }
+
+    async function readSelectedMedia() {
+      const file = mediaInput.files?.[0];
+      if (!file) return null;
+      if (!isAllowedMedia(file) || file.size > maxMediaBytes) return null;
+      const url = await readFileAsDataUrl(file);
+      return {
+        type: file.type.startsWith("video/") ? "video" : "image",
+        url,
+        name: escapeHtml(file.name),
+        size: file.size
+      };
+    }
+
+    function readFileAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function formatBytes(bytes) {
+      if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+    }
+
     function render() {
       const visiblePosts = activeAuthorId ? posts.filter((post) => post.authorId === activeAuthorId || post.comments.some((comment) => comment.authorId === activeAuthorId)) : posts;
       feed.innerHTML = visiblePosts.map(cardTemplate).join("");
@@ -1956,6 +2082,7 @@
               <span>${relativeTime(post.createdAt)}</span>
             </div>
             <p class="message">${post.text}</p>
+            ${mediaTemplate(post.media)}
             <div class="card-meta">
               <span>${categoryName(post.category)}</span>
               <span>댓글 ${comments.length}</span>
@@ -1979,6 +2106,20 @@
             </form>
           </div>
         </article>
+      `;
+    }
+
+    function mediaTemplate(media) {
+      const safeMedia = normalizeMedia(media);
+      if (!safeMedia) return "";
+      if (safeMedia.type === "image") {
+        return `<div class="card-media"><img src="${escapeAttr(safeMedia.url)}" alt="${escapeAttr(safeMedia.name)}" loading="lazy" /></div>`;
+      }
+      return `
+        <div class="card-media">
+          <video src="${escapeAttr(safeMedia.url)}" controls playsinline preload="metadata"></video>
+          <span class="media-badge">영상 · ${safeMedia.name}</span>
+        </div>
       `;
     }
 
@@ -2053,7 +2194,8 @@
       canvas.height = 1920;
       const ctx = canvas.getContext("2d");
       const logo = await loadLogoImage().catch(() => null);
-      drawShareImage(ctx, post, canvas.width, canvas.height, logo);
+      const mediaImage = post.media?.type === "image" ? await loadDataImage(post.media.url).catch(() => null) : null;
+      drawShareImage(ctx, post, canvas.width, canvas.height, logo, mediaImage);
       return new Promise((resolve, reject) => {
         canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("empty image")), "image/png", 0.95);
       });
@@ -2072,9 +2214,19 @@
       });
     }
 
-    function drawShareImage(ctx, post, width, height, logo) {
+    function loadDataImage(src) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = src;
+      });
+    }
+
+    function drawShareImage(ctx, post, width, height, logo, mediaImage) {
       const bg = safeHex(post.bgColor, "#f8f3e7");
       const fg = safeHex(post.textColor, "#1d1c18");
+      const hasMedia = mediaImage || post.media?.type === "video";
       ctx.fillStyle = "#eee8dc";
       ctx.fillRect(0, 0, width, height);
 
@@ -2128,15 +2280,42 @@
       ctx.fillStyle = fg;
       ctx.font = "900 34px Pretendard, Arial, sans-serif";
       ctx.fillText(stripTags(post.authorName || "익명팬"), 135, 430);
+
+      const category = categoryName(post.category);
+      ctx.font = "900 26px Pretendard, Arial, sans-serif";
+      const pillWidth = Math.max(116, ctx.measureText(category).width + 48);
+      drawRoundedRect(ctx, 945 - pillWidth, 392, pillWidth, 50, 25, "rgba(73,108,88,.14)");
+      ctx.fillStyle = fg;
+      ctx.fillText(category, 945 - pillWidth + 24, 425);
+
       ctx.font = "800 25px Pretendard, Arial, sans-serif";
       ctx.fillStyle = mixColor(fg, "#777777", .38);
       ctx.fillText(post.authorType === "member" ? `Lv.${post.authorLevel || 1}` : `IP ${post.authorIp || maskedIp()}`, 135, 470);
+
+      ctx.strokeStyle = "rgba(29,28,24,.16)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(135, 522);
+      ctx.lineTo(945, 522);
+      ctx.stroke();
 
       ctx.fillStyle = fg;
       ctx.font = post.style === "board"
         ? "900 58px 'Segoe Print', 'Comic Sans MS', cursive"
         : "900 58px Pretendard, Arial, sans-serif";
-      wrapCanvasText(ctx, stripTags(post.text), 135, 595, 810, 78, 8);
+      wrapCanvasText(ctx, stripTags(post.text), 135, 625, 810, 78, hasMedia ? 4 : 7);
+
+      if (mediaImage) {
+        drawCoverImage(ctx, mediaImage, 135, 900, 810, 260, 22);
+      } else if (post.media?.type === "video") {
+        drawRoundedRect(ctx, 135, 900, 810, 170, 22, "rgba(29,28,24,.08)");
+        ctx.fillStyle = fg;
+        ctx.font = "900 42px Pretendard, Arial, sans-serif";
+        ctx.fillText("영상 포함", 180, 985);
+        ctx.font = "800 26px Pretendard, Arial, sans-serif";
+        ctx.fillStyle = mixColor(fg, "#777777", .38);
+        ctx.fillText(stripTags(post.media.name || "첨부 영상"), 180, 1030);
+      }
 
       ctx.strokeStyle = "rgba(29,28,24,.13)";
       ctx.lineWidth = 3;
@@ -2149,7 +2328,6 @@
       ctx.fillStyle = fg;
       ctx.fillText(`공감 ${post.likes}`, 135, 1285);
       ctx.fillText(`댓글 ${(post.comments || []).length}`, 360, 1285);
-      ctx.fillText(categoryName(post.category), 615, 1285);
 
       ctx.fillStyle = "#1d1c18";
       ctx.font = "900 54px Pretendard, Arial, sans-serif";
@@ -2176,6 +2354,22 @@
     function drawRoundedStroke(ctx, x, y, width, height, radius) {
       roundedPath(ctx, x, y, width, height, radius);
       ctx.stroke();
+    }
+
+    function drawCoverImage(ctx, image, x, y, width, height, radius) {
+      const scale = Math.max(width / image.width, height / image.height);
+      const drawWidth = image.width * scale;
+      const drawHeight = image.height * scale;
+      const dx = x + (width - drawWidth) / 2;
+      const dy = y + (height - drawHeight) / 2;
+      ctx.save();
+      roundedPath(ctx, x, y, width, height, radius);
+      ctx.clip();
+      ctx.drawImage(image, dx, dy, drawWidth, drawHeight);
+      ctx.restore();
+      ctx.strokeStyle = "rgba(29,28,24,.13)";
+      ctx.lineWidth = 3;
+      drawRoundedStroke(ctx, x, y, width, height, radius);
     }
 
     function roundedPath(ctx, x, y, width, height, radius) {
@@ -2374,8 +2568,14 @@
       savePosts();
       if (!serviceClient) return;
       const result = await serviceClient.from("posts").upsert(toRemotePost(post));
-      if (result.error && String(result.error.message || "").includes("category")) {
-        await serviceClient.from("posts").upsert(toRemotePost(post, false));
+      if (result.error && isMissingColumnError(result.error)) {
+        const retry = await serviceClient.from("posts").upsert(toRemotePost(post, {
+          category: !String(result.error.message || "").includes("category"),
+          media: false
+        }));
+        if (retry.error && isMissingColumnError(retry.error)) {
+          await serviceClient.from("posts").upsert(toRemotePost(post, { category: false, media: false }));
+        }
         return;
       }
       if (result.error) throw result.error;
@@ -2404,7 +2604,14 @@
       }).then(() => {});
     }
 
-    function toRemotePost(post, includeCategory = true) {
+    function isMissingColumnError(error) {
+      const message = String(error?.message || "");
+      return message.includes("category") || message.includes("media_");
+    }
+
+    function toRemotePost(post, options = {}) {
+      const includeCategory = options.category !== false;
+      const includeMedia = options.media !== false;
       const payload = {
         id: post.id,
         author_id: post.authorId,
@@ -2422,6 +2629,13 @@
         created_at: new Date(post.createdAt).toISOString()
       };
       if (includeCategory) payload.category = normalizeCategory(post.category);
+      if (includeMedia) {
+        const media = normalizeMedia(post.media);
+        payload.media_type = media?.type || "";
+        payload.media_url = media?.url || "";
+        payload.media_name = media?.name || "";
+        payload.media_size = media?.size || 0;
+      }
       return payload;
     }
 
@@ -2440,6 +2654,12 @@
         bgColor: post.bg_color,
         textColor: post.text_color,
         text: post.body_html,
+        media: normalizeMedia({
+          type: post.media_type,
+          url: post.media_url,
+          name: post.media_name,
+          size: Number(post.media_size || 0)
+        }),
         likes: post.likes || 0,
         comments: [],
         createdAt: new Date(post.created_at).getTime()

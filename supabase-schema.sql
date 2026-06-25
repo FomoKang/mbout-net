@@ -11,6 +11,10 @@ create table if not exists public.posts (
   category text not null default 'sad',
   bg_color text not null default '#f8f3e7',
   text_color text not null default '#1d1c18',
+  media_type text not null default '',
+  media_url text not null default '',
+  media_name text not null default '',
+  media_size integer not null default 0,
   body_html text not null,
   likes integer not null default 0,
   created_at timestamptz not null default now()
@@ -55,6 +59,12 @@ alter table public.profiles enable row level security;
 
 alter table public.posts
   add column if not exists category text not null default 'sad';
+
+alter table public.posts
+  add column if not exists media_type text not null default '',
+  add column if not exists media_url text not null default '',
+  add column if not exists media_name text not null default '',
+  add column if not exists media_size integer not null default 0;
 
 drop policy if exists "Public posts are readable" on public.posts;
 create policy "Public posts are readable"
