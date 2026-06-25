@@ -313,7 +313,8 @@
     }
 
     .is-hidden,
-    .field.is-hidden {
+    .field.is-hidden,
+    .composer-account.is-hidden {
       display: none;
     }
 
@@ -334,6 +335,20 @@
       color: var(--muted);
       font-size: .78rem;
       font-weight: 800;
+    }
+
+    .composer-login {
+      display: grid;
+      gap: 8px;
+      margin-top: 7px;
+    }
+
+    .composer-login button {
+      min-height: 40px;
+      border-radius: var(--radius);
+      background: var(--green);
+      color: #fff;
+      font-weight: 950;
     }
 
     label {
@@ -1263,7 +1278,7 @@
       setMode("member");
       document.querySelector("#accountPanel").scrollIntoView({ behavior: "smooth", block: "start" });
       requestAnimationFrame(() => {
-        const firstAccountField = document.querySelector("#signupDisplayName, #accountNick, #loginEmail");
+        const firstAccountField = document.querySelector("#signupDisplayName, #accountNick, #composerLoginEmail");
         if (firstAccountField) firstAccountField.focus({ preventScroll: true });
       });
     });
@@ -1765,7 +1780,7 @@
     function setMode(mode) {
       currentMode = mode === "member" ? "member" : "guest";
       document.querySelectorAll("#modeRow button").forEach((item) => item.classList.toggle("active", item.dataset.mode === currentMode));
-      document.querySelector("#accountMode").textContent = currentMode === "member" ? "로그인" : "비로그인";
+      document.querySelector("#accountMode").textContent = currentAccount ? "로그인" : "회원가입";
       updateComposerIdentity();
       renderAccount();
     }
@@ -1790,8 +1805,31 @@
       }
       composerAccount.innerHTML = `
         <strong>로그인이 필요합니다</strong>
-        <span>오른쪽 계정 패널에서 이메일과 비밀번호로 로그인해주세요.</span>
+        <span>가입한 이메일과 비밀번호로 로그인해주세요.</span>
+        <div class="composer-login">
+          <input id="composerLoginEmail" type="email" maxlength="80" placeholder="가입한 이메일" autocomplete="email" />
+          <input id="composerLoginPassword" type="password" maxlength="48" placeholder="비밀번호" autocomplete="current-password" />
+          <button id="composerLoginButton" type="button">로그인</button>
+        </div>
       `;
+      bindComposerLogin();
+    }
+
+    function bindComposerLogin() {
+      const loginButton = document.querySelector("#composerLoginButton");
+      const emailInput = document.querySelector("#composerLoginEmail");
+      const passwordInput = document.querySelector("#composerLoginPassword");
+      if (!loginButton || !emailInput || !passwordInput) return;
+      loginButton.addEventListener("click", async () => {
+        const result = await loginMemberAccount("", passwordInput.value.trim(), {
+          email: emailInput.value
+        });
+        if (!result.ok) {
+          showToast(result.message);
+          return;
+        }
+        saveSessionAccount(result.account);
+      });
     }
 
     function syncMemberAuthor(account) {
@@ -2547,13 +2585,26 @@
       }
 
       if (currentMode !== "member") {
+        if (serviceClient) {
+          accountBox.innerHTML = `
+            <div class="account-item">
+              <strong>회원가입</strong>
+              <span>닉네임, 이메일, 비밀번호로 가입합니다. 로그인은 왼쪽 글쓰기의 로그인 탭에서 합니다.</span>
+            </div>
+            <div class="account-form">
+              ${accountFormFields(nick)}
+            </div>
+          `;
+          bindAccountForm();
+          return;
+        }
         accountBox.innerHTML = `
           <div class="account-item">
             <strong>${escapeHtml(base)} <span class="ip-tag">IP ${maskedIp()}</span></strong>
             <span>비로그인 글은 글쓰기 칸의 닉네임과 비밀번호로 작성됩니다. 카드에는 IP 번호가 붙고, 레벨 EXP는 쌓이지 않습니다.</span>
           </div>
           <div class="account-form">
-            <div class="account-note">${serviceClient ? "DB 계정은 이메일로 로그인합니다. 닉네임은 카드에 표시됩니다." : "레벨을 올리고 싶으면 아래에서 같은 닉네임과 비밀번호로 계정을 만들면 됩니다."}</div>
+            <div class="account-note">${serviceClient ? "회원가입만 여기서 합니다. 로그인은 왼쪽 글쓰기의 로그인 탭에서 해주세요." : "레벨을 올리고 싶으면 아래에서 같은 닉네임과 비밀번호로 계정을 만들면 됩니다."}</div>
             ${accountFormFields(nick)}
           </div>
         `;
@@ -2563,12 +2614,12 @@
 
       accountBox.innerHTML = `
         <div class="account-item">
-          <strong>가입 또는 로그인</strong>
-          <span>${serviceClient ? "DB 계정으로 글을 쓰면 IP 대신 레벨이 붙고, 오늘의 목표 EXP가 누적됩니다." : "회원으로 글을 쓰면 IP 대신 레벨이 붙고, 오늘의 목표 EXP가 누적됩니다."}</span>
+          <strong>회원가입</strong>
+          <span>${serviceClient ? "가입 후 인증 메일을 확인하면 왼쪽 로그인 탭에서 글을 쓸 수 있습니다." : "회원으로 글을 쓰면 IP 대신 레벨이 붙고, 오늘의 목표 EXP가 누적됩니다."}</span>
         </div>
         <div class="account-form">
           ${accountFormFields(nick)}
-          <div class="account-note">${serviceClient ? "가입 후 인증 메일을 확인하고, 로그인은 이메일과 비밀번호로 해주세요." : "실명 인증 없는 로컬 계정입니다. 같은 브라우저에서만 로그인 상태가 유지됩니다."}</div>
+          <div class="account-note">${serviceClient ? "닉네임은 카드에 표시되고, 로그인은 이메일과 비밀번호로 합니다." : "실명 인증 없는 로컬 계정입니다. 같은 브라우저에서만 로그인 상태가 유지됩니다."}</div>
         </div>
       `;
       bindAccountForm();
@@ -2594,12 +2645,6 @@
         <div class="account-actions">
           <button id="createAccount" type="button">가입</button>
         </div>
-        <div class="account-note">로그인</div>
-        <input id="loginEmail" type="email" maxlength="80" placeholder="가입한 이메일" autocomplete="email" />
-        <input id="loginPassword" type="password" maxlength="48" placeholder="비밀번호" autocomplete="current-password" />
-        <div class="account-actions">
-          <button id="loginAccount" class="secondary" type="button">로그인</button>
-        </div>
       `;
     }
 
@@ -2619,7 +2664,7 @@
         nicknameInput.value = signupDisplayName.value;
       });
 
-      document.querySelector("#createAccount").addEventListener("click", async () => {
+      document.querySelector("#createAccount")?.addEventListener("click", async () => {
         const nickValue = serviceClient ? signupDisplayName?.value : accountNick?.value;
         const passwordValue = serviceClient ? signupPassword?.value : accountPassword?.value;
         const result = await createMemberAccount(nickValue || "", String(passwordValue || "").trim(), {
@@ -2636,7 +2681,7 @@
         saveSessionAccount(result.account);
       });
 
-      document.querySelector("#loginAccount").addEventListener("click", async () => {
+      document.querySelector("#loginAccount")?.addEventListener("click", async () => {
         const nickValue = serviceClient ? "" : accountNick?.value;
         const passwordValue = serviceClient ? loginPassword?.value : accountPassword?.value;
         const result = await loginMemberAccount(nickValue || "", String(passwordValue || "").trim(), {
