@@ -706,8 +706,8 @@
 
     .report-btn {
       position: absolute;
-      right: 10px;
-      bottom: 54px;
+      right: 12px;
+      top: 56px;
       z-index: 2;
       display: inline-grid;
       place-items: center;
@@ -717,7 +717,7 @@
       border-radius: 999px;
       background: rgba(255,255,255,.62);
       color: color-mix(in srgb, var(--card-fg, #1d1c18) 74%, #496c58);
-      opacity: .74;
+      opacity: .64;
       transition: opacity .16s ease, transform .16s ease, background .16s ease;
     }
 
@@ -782,8 +782,12 @@
 
     .comment-form {
       display: grid;
-      grid-template-columns: 1fr auto;
+      grid-template-columns: minmax(0, .72fr) minmax(0, .72fr) minmax(0, 1.4fr) auto;
       gap: 8px;
+    }
+
+    .comment-form.member {
+      grid-template-columns: 1fr auto;
     }
 
     .comment-form button,
@@ -1035,6 +1039,28 @@
 
       .split {
         grid-template-columns: 1fr;
+      }
+
+      .comment-form {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .comment-form input[name="commentText"] {
+        grid-column: 1 / -1;
+      }
+
+      .comment-form button {
+        grid-column: 1 / -1;
+        min-height: 42px;
+      }
+
+      .comment-form.member {
+        grid-template-columns: 1fr auto;
+      }
+
+      .comment-form.member input[name="commentText"],
+      .comment-form.member button {
+        grid-column: auto;
       }
     }
   </style>
@@ -2019,23 +2045,26 @@
         form.addEventListener("submit", async (event) => {
           event.preventDefault();
           const post = posts.find((item) => item.id === form.closest(".card").dataset.id);
-          const input = form.querySelector("input");
+          const input = form.querySelector("[name='commentText']");
+          const nickInput = form.querySelector("[name='commentNick']");
+          const passInput = form.querySelector("[name='commentPassword']");
           const text = input.value.trim();
           const validation = validateComment(text);
           if (!post || !validation.ok) {
             showToast(validation.message || "댓글을 등록할 수 없습니다.");
             return;
           }
-          const password = passwordInput.value.trim();
           if (currentMode === "member" && !currentAccount) {
             showToast("계정 패널에서 먼저 가입하거나 로그인해주세요.");
             return;
           }
+          const password = currentMode === "guest" ? String(passInput?.value || "").trim() : "";
           if (currentMode === "guest" && !password) {
-            showToast("댓글도 비밀번호가 필요합니다.");
+            showToast("댓글 비밀번호를 입력해주세요.");
             return;
           }
-          const author = resolveAuthor(nicknameInput.value.trim() || "익명팬", password, currentMode);
+          const commentNick = currentMode === "guest" ? String(nickInput?.value || "").trim() : nicknameInput.value.trim();
+          const author = resolveAuthor(commentNick || "익명팬", password, currentMode);
           const comment = {
             id: makeId(),
             authorId: author.id,
@@ -2050,6 +2079,7 @@
           };
           post.comments.push(comment);
           input.value = "";
+          if (passInput) passInput.value = "";
           await persistComment(post.id, comment);
           render();
         });
@@ -2100,12 +2130,28 @@
             <div class="comment-list">
               ${comments.length ? comments.map(commentTemplate).join("") : `<div class="comment"><span>아직 댓글이 없습니다.</span></div>`}
             </div>
-            <form class="comment-form">
-              <input maxlength="80" placeholder="댓글 쓰기" />
-              <button type="submit">등록</button>
-            </form>
+            ${commentFormTemplate()}
           </div>
         </article>
+      `;
+    }
+
+    function commentFormTemplate() {
+      if (currentMode === "member") {
+        return `
+          <form class="comment-form member">
+            <input name="commentText" maxlength="80" placeholder="${currentAccount ? "댓글 쓰기" : "로그인 후 댓글 쓰기"}" />
+            <button type="submit">등록</button>
+          </form>
+        `;
+      }
+      return `
+        <form class="comment-form">
+          <input name="commentNick" maxlength="12" placeholder="닉네임" value="${escapeAttr(nicknameInput.value.trim() || "익명팬")}" />
+          <input name="commentPassword" type="password" maxlength="24" placeholder="비밀번호" />
+          <input name="commentText" maxlength="80" placeholder="댓글 쓰기" />
+          <button type="submit">등록</button>
+        </form>
       `;
     }
 
