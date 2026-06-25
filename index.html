@@ -742,6 +742,59 @@
       font-size: .78rem;
     }
 
+    .account-form {
+      display: grid;
+      gap: 8px;
+      padding: 13px 15px 15px;
+    }
+
+    .account-form input {
+      width: 100%;
+      min-height: 38px;
+      padding: 0 11px;
+      border: 1px solid rgba(25,28,35,.14);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.62);
+      color: var(--ink);
+      font-weight: 750;
+    }
+
+    .account-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .account-actions button,
+    .logout-btn {
+      min-height: 38px;
+      border: 1px solid rgba(25,28,35,.13);
+      border-radius: var(--radius);
+      background: var(--green);
+      color: #fff;
+      font-weight: 950;
+    }
+
+    .account-actions button.secondary,
+    .logout-btn {
+      background: rgba(255,255,255,.62);
+      color: var(--ink);
+    }
+
+    .account-note {
+      color: var(--muted);
+      font-size: .76rem;
+      line-height: 1.45;
+    }
+
+    :root[data-theme="dark"] .account-form input,
+    :root[data-theme="dark"] .account-actions button.secondary,
+    :root[data-theme="dark"] .logout-btn {
+      border-color: rgba(243,239,229,.15);
+      background: rgba(22,23,20,.78);
+      color: #f3efe5;
+    }
+
     .goal-meter {
       height: 8px;
       overflow: hidden;
@@ -968,6 +1021,7 @@
     const identityKey = "mbout-identity-v2";
     const registryKey = "mbout-author-registry-v2";
     const accountKey = "mbout-account-v2";
+    const sessionKey = "mbout-session-v2";
     const themeKey = "mbout-theme-v2";
     const goalAwardKey = "mbout-goal-awards-v2";
     const serviceConfig = {
@@ -1005,7 +1059,8 @@
 
     let posts = loadPosts();
     let selectedStyle = "paper";
-    let currentMode = "guest";
+    let currentAccount = loadSessionAccount();
+    let currentMode = currentAccount ? "member" : "guest";
     let activeAuthorId = null;
     let onlineCount = 1;
     let presenceMode = serviceConfig.supabaseUrl && serviceConfig.supabaseAnonKey ? "connecting" : "local";
@@ -1024,6 +1079,8 @@
     const themeToggle = document.querySelector("#themeToggle");
 
     applyStoredTheme();
+    hydrateComposerAccount();
+    setMode(currentMode);
 
     document.querySelectorAll("#styleRow button").forEach((button) => {
       button.addEventListener("click", () => {
@@ -1035,10 +1092,7 @@
 
     document.querySelectorAll("#modeRow button").forEach((button) => {
       button.addEventListener("click", () => {
-        currentMode = button.dataset.mode;
-        document.querySelectorAll("#modeRow button").forEach((item) => item.classList.toggle("active", item === button));
-        document.querySelector("#accountMode").textContent = currentMode === "member" ? "로그인" : "비로그인";
-        renderAccount();
+        setMode(button.dataset.mode);
       });
     });
 
@@ -1067,7 +1121,12 @@
       }
 
       const password = passwordInput.value.trim();
-      if (!password) {
+      if (currentMode === "member" && !currentAccount) {
+        notice.textContent = "계정 패널에서 먼저 가입하거나 로그인해주세요.";
+        pulseNotice();
+        return;
+      }
+      if (currentMode === "guest" && !password) {
         notice.textContent = "비밀번호를 입력해주세요.";
         pulseNotice();
         return;
@@ -1096,6 +1155,7 @@
       posts = posts.slice(0, 80);
       await persistPost(post);
       postForm.reset();
+      hydrateComposerAccount();
       selectedStyle = "paper";
       document.querySelectorAll("#styleRow button").forEach((item) => item.classList.toggle("active", item.dataset.style === "paper"));
       applyStyleDefaults("paper");
@@ -1219,7 +1279,24 @@
     }
 
     function resolveAuthor(rawBase, password, mode) {
-      const base = escapeHtml(rawBase.replace(/\s+/g, "").replace(/\d+$/, "").slice(0, 12) || "익명팬");
+      if (mode === "member" && currentAccount) {
+        const registry = loadRegistry();
+        const key = `member::${currentAccount.id}`;
+        registry.authors[key] = {
+          id: currentAccount.id,
+          base: currentAccount.nick,
+          number: "",
+          name: currentAccount.nick,
+          type: "member",
+          ip: "",
+          level: currentAccount.level || 1,
+          verified: true
+        };
+        localStorage.setItem(registryKey, JSON.stringify(registry));
+        return registry.authors[key];
+      }
+
+      const base = normalizeNick(rawBase);
       const clientId = getClientId();
       const registry = loadRegistry();
       const safePassword = simpleHash(`${base}:${password}`);
@@ -1279,6 +1356,10 @@
       return { counts: {}, authors: {} };
     }
 
+    function normalizeNick(raw) {
+      return escapeHtml(String(raw || "익명팬").replace(/\s+/g, "").replace(/\d+$/, "").slice(0, 12) || "익명팬");
+    }
+
     function loadAccounts() {
       try {
         const accounts = JSON.parse(localStorage.getItem(accountKey) || "null");
@@ -1288,12 +1369,12 @@
     }
 
     function loadAccount(nick, passwordHash) {
-      const base = escapeHtml(String(nick || "익명팬").replace(/\s+/g, "").replace(/\d+$/, "").slice(0, 12) || "익명팬");
+      const base = normalizeNick(nick);
       return loadAccounts()[`member-${simpleHash(`${base}:${passwordHash}`)}`] || loadAccounts()[`member-${passwordHash}`] || null;
     }
 
     function ensureAccount(nick, passwordHash) {
-      const base = escapeHtml(String(nick || "익명팬").replace(/\s+/g, "").replace(/\d+$/, "").slice(0, 12) || "익명팬");
+      const base = normalizeNick(nick);
       const accounts = loadAccounts();
       const id = `member-${passwordHash}`;
       if (!accounts[id]) {
@@ -1314,6 +1395,69 @@
       const accounts = loadAccounts();
       accounts[account.id] = account;
       localStorage.setItem(accountKey, JSON.stringify(accounts));
+    }
+
+    function loadSessionAccount() {
+      try {
+        const session = JSON.parse(localStorage.getItem(sessionKey) || "null");
+        if (!session?.id) return null;
+        return loadAccounts()[session.id] || null;
+      } catch {
+        return null;
+      }
+    }
+
+    function saveSessionAccount(account) {
+      currentAccount = account;
+      localStorage.setItem(sessionKey, JSON.stringify({ id: account.id }));
+      hydrateComposerAccount();
+      setMode("member");
+      showToast(`${account.nick}으로 로그인했습니다.`);
+    }
+
+    function clearSessionAccount() {
+      currentAccount = null;
+      localStorage.removeItem(sessionKey);
+      setMode("guest");
+      showToast("로그아웃했습니다.");
+    }
+
+    function accountHash(nick, password) {
+      const base = normalizeNick(nick);
+      return simpleHash(`${base}:${password}`);
+    }
+
+    function createMemberAccount(nick, password) {
+      const base = normalizeNick(nick);
+      if (!base || base === "익명팬") return { ok: false, message: "닉네임을 입력해주세요." };
+      if (password.length < 4) return { ok: false, message: "비밀번호는 4자 이상으로 해주세요." };
+      const passwordHash = accountHash(base, password);
+      const existing = loadAccount(base, passwordHash);
+      if (existing) return { ok: false, message: "이미 있는 계정입니다. 로그인 버튼을 눌러주세요." };
+      const account = ensureAccount(base, passwordHash);
+      return { ok: true, account };
+    }
+
+    function loginMemberAccount(nick, password) {
+      const base = normalizeNick(nick);
+      if (!base || base === "익명팬") return { ok: false, message: "닉네임을 입력해주세요." };
+      if (!password) return { ok: false, message: "비밀번호를 입력해주세요." };
+      const account = loadAccount(base, accountHash(base, password));
+      if (!account) return { ok: false, message: "계정이 없거나 비밀번호가 다릅니다." };
+      return { ok: true, account };
+    }
+
+    function hydrateComposerAccount() {
+      if (!currentAccount) return;
+      nicknameInput.value = currentAccount.nick;
+      passwordInput.value = "";
+    }
+
+    function setMode(mode) {
+      currentMode = mode === "member" ? "member" : "guest";
+      document.querySelectorAll("#modeRow button").forEach((item) => item.classList.toggle("active", item.dataset.mode === currentMode));
+      document.querySelector("#accountMode").textContent = currentMode === "member" ? "로그인" : "비로그인";
+      renderAccount();
     }
 
     function syncMemberAuthor(account) {
@@ -1393,7 +1537,11 @@
             return;
           }
           const password = passwordInput.value.trim();
-          if (!password) {
+          if (currentMode === "member" && !currentAccount) {
+            showToast("계정 패널에서 먼저 가입하거나 로그인해주세요.");
+            return;
+          }
+          if (currentMode === "guest" && !password) {
             showToast("댓글도 비밀번호가 필요합니다.");
             return;
           }
@@ -1716,13 +1864,8 @@
     }
 
     function awardGoalXp(goalData) {
-      if (currentMode !== "member") return;
-      const password = passwordInput.value.trim();
-      const nick = nicknameInput.value.trim();
-      if (!password || !nick) return;
-
-      const passwordHash = simpleHash(`${nick.replace(/\s+/g, "").replace(/\d+$/, "").slice(0, 12) || "익명팬"}:${password}`);
-      const account = loadAccount(nick, passwordHash);
+      if (currentMode !== "member" || !currentAccount) return;
+      const account = loadAccounts()[currentAccount.id];
       if (!account) return;
 
       const todayKey = new Date().toISOString().slice(0, 10);
@@ -1745,48 +1888,101 @@
         account.level += 1;
       }
       saveAccount(account);
+      currentAccount = account;
       localStorage.setItem(goalAwardKey, JSON.stringify(awards));
       syncMemberAuthor(account);
     }
 
     function renderAccount() {
       const accountBox = document.querySelector("#account");
-      const password = passwordInput.value.trim();
       const nick = nicknameInput.value.trim();
-      const base = nick.replace(/\s+/g, "").replace(/\d+$/, "").slice(0, 12) || "익명팬";
+      const base = normalizeNick(nick);
       document.querySelector("#accountMode").textContent = currentMode === "member" ? "로그인" : "비로그인";
+
+      if (currentAccount) {
+        const account = loadAccounts()[currentAccount.id] || currentAccount;
+        currentAccount = account;
+        const needed = xpForNext(account.level);
+        const percent = Math.min(100, Math.round((account.xp / needed) * 100));
+        accountBox.innerHTML = `
+          <div class="account-item">
+            <strong><span class="${levelClass(account.level)}">${account.nick}</span> Lv.${account.level}</strong>
+            <span>EXP ${account.xp}/${needed} · ${levelTitle(account.level)}</span>
+            <div class="xp-bar"><span style="width:${percent}%"></span></div>
+          </div>
+          <div class="account-form">
+            <button class="logout-btn" id="logoutAccount" type="button">로그아웃</button>
+            <div class="account-note">회원 글과 댓글에는 IP 대신 레벨이 표시됩니다. 목표 달성 EXP도 이 계정에 쌓입니다.</div>
+          </div>
+        `;
+        document.querySelector("#logoutAccount").addEventListener("click", clearSessionAccount);
+        return;
+      }
 
       if (currentMode !== "member") {
         accountBox.innerHTML = `
           <div class="account-item">
             <strong>${escapeHtml(base)} <span class="ip-tag">IP ${maskedIp()}</span></strong>
-            <span>비로그인 글은 닉네임과 비밀번호로 작성됩니다. 카드에는 로그인/비로그인 차별 없이 표시됩니다.</span>
+            <span>비로그인 글은 글쓰기 칸의 닉네임과 비밀번호로 작성됩니다. 카드에는 IP 번호가 붙고, 레벨 EXP는 쌓이지 않습니다.</span>
+          </div>
+          <div class="account-form">
+            <div class="account-note">레벨을 올리고 싶으면 아래에서 같은 닉네임과 비밀번호로 계정을 만들면 됩니다.</div>
+            <input id="accountNick" maxlength="12" placeholder="닉네임" autocomplete="username" value="${escapeAttr(nick)}" />
+            <input id="accountPassword" type="password" maxlength="24" placeholder="비밀번호 4자 이상" autocomplete="new-password" />
+            <div class="account-actions">
+              <button id="createAccount" type="button">가입</button>
+              <button id="loginAccount" class="secondary" type="button">로그인</button>
+            </div>
           </div>
         `;
+        bindAccountForm();
         return;
       }
 
-      if (!password || !nick) {
-        accountBox.innerHTML = `
-          <div class="account-item">
-            <strong>로그인 준비</strong>
-            <span>닉네임과 비밀번호를 입력하면 로컬 로그인 계정으로 기록됩니다.</span>
-          </div>
-        `;
-        return;
-      }
-
-      const passwordHash = simpleHash(`${base}:${password}`);
-      const account = ensureAccount(base, passwordHash);
-      const needed = xpForNext(account.level);
-      const percent = Math.min(100, Math.round((account.xp / needed) * 100));
       accountBox.innerHTML = `
         <div class="account-item">
-          <strong><span class="${levelClass(account.level)}">${account.nick}</span> Lv.${account.level}</strong>
-          <span>EXP ${account.xp}/${needed} · ${levelTitle(account.level)}</span>
-          <div class="xp-bar"><span style="width:${percent}%"></span></div>
+          <strong>가입 또는 로그인</strong>
+          <span>회원으로 글을 쓰면 IP 대신 레벨이 붙고, 오늘의 목표 EXP가 누적됩니다.</span>
+        </div>
+        <div class="account-form">
+          <input id="accountNick" maxlength="12" placeholder="닉네임" autocomplete="username" value="${escapeAttr(nick)}" />
+          <input id="accountPassword" type="password" maxlength="24" placeholder="비밀번호 4자 이상" autocomplete="current-password" />
+          <div class="account-actions">
+            <button id="createAccount" type="button">가입</button>
+            <button id="loginAccount" class="secondary" type="button">로그인</button>
+          </div>
+          <div class="account-note">실명 인증 없는 로컬 계정입니다. 같은 브라우저에서만 로그인 상태가 유지됩니다.</div>
         </div>
       `;
+      bindAccountForm();
+    }
+
+    function bindAccountForm() {
+      const accountNick = document.querySelector("#accountNick");
+      const accountPassword = document.querySelector("#accountPassword");
+      if (!accountNick || !accountPassword) return;
+
+      accountNick.addEventListener("input", () => {
+        nicknameInput.value = accountNick.value;
+      });
+
+      document.querySelector("#createAccount").addEventListener("click", () => {
+        const result = createMemberAccount(accountNick.value, accountPassword.value.trim());
+        if (!result.ok) {
+          showToast(result.message);
+          return;
+        }
+        saveSessionAccount(result.account);
+      });
+
+      document.querySelector("#loginAccount").addEventListener("click", () => {
+        const result = loginMemberAccount(accountNick.value, accountPassword.value.trim());
+        if (!result.ok) {
+          showToast(result.message);
+          return;
+        }
+        saveSessionAccount(result.account);
+      });
     }
 
     function renderProfile() {
