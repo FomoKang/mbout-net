@@ -1,0 +1,1965 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MBOUT.NET</title>
+  <script src="./mbout.config.js"></script>
+  <style>
+    :root {
+      --bg: #eee8dc;
+      --ink: #1d1c18;
+      --muted: #716c61;
+      --panel: rgba(250,247,239,.86);
+      --line: rgba(49,44,35,.13);
+      --green: #496c58;
+      --red: #a64d3f;
+      --blue: #536d82;
+      --gold: #9b7744;
+      --paper: #f8f3e7;
+      --paper-2: #f1eadc;
+      --shadow: 0 14px 34px rgba(49,44,35,.11);
+      --radius: 8px;
+      font-family: Pretendard, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #151613;
+      --ink: #f3efe5;
+      --muted: #a9a092;
+      --panel: rgba(31,32,28,.88);
+      --line: rgba(243,239,229,.13);
+      --green: #8aa68e;
+      --red: #d18475;
+      --blue: #91a8bd;
+      --gold: #c8a76b;
+      --paper: #24251f;
+      --paper-2: #2b2b25;
+      --shadow: 0 14px 34px rgba(0,0,0,.28);
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      min-height: 100%;
+      scrollbar-color: rgba(36,93,69,.55) rgba(25,28,35,.08);
+      scrollbar-gutter: stable;
+      background:
+        radial-gradient(circle at 18% 6%, rgba(73,108,88,.09), transparent 30%),
+        linear-gradient(rgba(73,108,88,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(73,108,88,.035) 1px, transparent 1px),
+        var(--bg);
+      background-size: auto, 46px 46px, 46px 46px, auto;
+      color: var(--ink);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(36,93,69,.55) rgba(25,28,35,.08);
+    }
+
+    *::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    *::-webkit-scrollbar-track {
+      background: rgba(25,28,35,.06);
+      border-radius: 999px;
+    }
+
+    *::-webkit-scrollbar-thumb {
+      border: 2px solid rgba(243,240,233,.9);
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(36,93,69,.82), rgba(168,115,33,.72));
+    }
+
+    *::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, rgba(25,73,52,.95), rgba(199,61,54,.72));
+    }
+
+    *::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    :root[data-theme="dark"] input,
+    :root[data-theme="dark"] textarea {
+      background: rgba(22,23,20,.78);
+      border-color: rgba(243,239,229,.15);
+      color: var(--ink);
+    }
+
+    :root[data-theme="dark"] label {
+      color: #d9d1c1;
+    }
+
+    .app {
+      width: min(1360px, 100%);
+      margin: 0 auto;
+      padding: 22px clamp(14px, 2.4vw, 30px) 34px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 8px 0 22px;
+      border-bottom: 2px solid rgba(23,25,31,.12);
+    }
+
+    .brand {
+      display: grid;
+      gap: 8px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.2rem, 7vw, 5.8rem);
+      line-height: .88;
+      letter-spacing: 0;
+      font-weight: 950;
+    }
+
+    .home-link {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .home-link:hover {
+      text-decoration: underline;
+      text-decoration-thickness: .08em;
+      text-underline-offset: .08em;
+    }
+
+    .lead {
+      display: grid;
+      gap: 4px;
+      margin-top: 2px;
+      color: var(--ink);
+      font-size: clamp(1.02rem, 1.8vw, 1.45rem);
+      font-weight: 850;
+    }
+
+    .lead span:last-child {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .live-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.72);
+      box-shadow: var(--shadow);
+      color: var(--green);
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .theme-toggle {
+      min-height: 38px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.62);
+      color: var(--ink);
+      font-weight: 950;
+      box-shadow: var(--shadow);
+    }
+
+    :root[data-theme="dark"] .theme-toggle,
+    :root[data-theme="dark"] .live-chip {
+      background: rgba(31,32,28,.82);
+    }
+
+    :root[data-theme="dark"] .theme-toggle {
+      border-color: rgba(243,239,229,.28);
+      color: #f3efe5;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(290px, 360px) minmax(0, 1fr) minmax(260px, 310px);
+      gap: 16px;
+      align-items: start;
+      padding-top: 18px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 15px 10px;
+      border-bottom: 1px solid rgba(25,28,35,.08);
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      font-size: .98rem;
+      letter-spacing: 0;
+    }
+
+    .mini {
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .composer {
+      display: grid;
+      gap: 12px;
+      padding: 15px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    label {
+      color: #282c34;
+      font-size: .82rem;
+      font-weight: 850;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      border: 1px solid rgba(25,28,35,.15);
+      border-radius: var(--radius);
+      background: rgba(255,252,246,.78);
+      color: var(--ink);
+      outline: none;
+      padding: 11px 12px;
+    }
+
+    textarea {
+      min-height: 128px;
+      resize: vertical;
+      line-height: 1.55;
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: rgba(36,93,69,.68);
+      box-shadow: 0 0 0 3px rgba(36,93,69,.12);
+    }
+
+    input[type="color"] {
+      height: 42px;
+      padding: 4px;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .style-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+    }
+
+    .mode-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+
+    .style-row button {
+      min-height: 38px;
+      border: 1px solid rgba(25,28,35,.13);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.72);
+      color: var(--muted);
+      font-weight: 900;
+    }
+
+    .style-row button.active {
+      background: var(--ink);
+      color: #fff;
+      border-color: var(--ink);
+    }
+
+    :root[data-theme="dark"] .style-row button,
+    :root[data-theme="dark"] .mode-row button {
+      border-color: rgba(243,239,229,.24);
+      background: #262720;
+      color: #f3efe5;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+    }
+
+    :root[data-theme="dark"] .style-row button.active,
+    :root[data-theme="dark"] .mode-row button.active {
+      border-color: #f3efe5;
+      background: #f3efe5;
+      color: #151613;
+      box-shadow: none;
+    }
+
+    .mode-row button {
+      min-height: 38px;
+      border: 1px solid rgba(25,28,35,.13);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.72);
+      color: var(--muted);
+      font-weight: 900;
+    }
+
+    .mode-row button.active {
+      background: var(--green);
+      color: #fff;
+      border-color: var(--green);
+    }
+
+    :root[data-theme="dark"] .style-row button.active,
+    :root[data-theme="dark"] .mode-row button.active {
+      border-color: #f3efe5;
+      background: #f3efe5;
+      color: #151613;
+      box-shadow: none;
+    }
+
+    .submit {
+      width: 100%;
+      min-height: 46px;
+      border-radius: var(--radius);
+      background: var(--ink);
+      color: #fff;
+      font-weight: 950;
+    }
+
+    :root[data-theme="dark"] .submit,
+    :root[data-theme="dark"] .small-btn,
+    :root[data-theme="dark"] .comment-form button {
+      background: #f3efe5;
+      color: #151613;
+      border: 1px solid #f3efe5;
+    }
+
+    .notice {
+      min-height: 21px;
+      margin: 0;
+      color: var(--muted);
+      font-size: .8rem;
+      line-height: 1.45;
+    }
+
+    .feed-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .feed-title {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .feed-title strong {
+      font-size: 1rem;
+    }
+
+    .clear-filter {
+      display: none;
+      min-height: 32px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.75);
+      color: var(--muted);
+      font-size: .8rem;
+      font-weight: 900;
+    }
+
+    .clear-filter.show {
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .feed {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 13px;
+    }
+
+    .card {
+      position: relative;
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      border: 1px solid rgba(49,44,35,.14);
+      border-radius: var(--radius);
+      background: var(--card-bg, var(--paper));
+      color: var(--card-fg, var(--ink));
+      box-shadow: 0 12px 28px rgba(49,44,35,.1);
+      outline: 1px solid rgba(255,255,255,.45);
+      outline-offset: -2px;
+    }
+
+    .card.bold {
+      border-top: 5px solid rgba(166,77,63,.72);
+    }
+
+    .card.paper {
+      background:
+        linear-gradient(rgba(49,44,35,.035) 1px, transparent 1px),
+        linear-gradient(135deg, rgba(255,255,255,.36), rgba(255,255,255,0) 42%),
+        var(--card-bg, var(--paper));
+      background-size: 100% 30px;
+    }
+
+    .card.board {
+      border: 6px solid #6f5944;
+      background:
+        radial-gradient(circle at 18% 24%, rgba(255,255,255,.07), transparent 12%),
+        linear-gradient(rgba(255,255,255,.038) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px),
+        var(--card-bg, #36584a);
+      background-size: auto, 34px 34px, 34px 34px, auto;
+      box-shadow: inset 0 0 28px rgba(255,255,255,.055), 0 12px 28px rgba(49,44,35,.11);
+    }
+
+    .card-main {
+      padding: 15px 15px 10px;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: color-mix(in srgb, var(--card-fg, #1d1c18) 72%, transparent);
+      font-size: .78rem;
+      font-weight: 850;
+    }
+
+    .author-btn {
+      max-width: 72%;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+      padding: 4px 8px;
+      border: 1px solid rgba(25,28,35,.13);
+      border-radius: 999px;
+      background: rgba(255,255,255,.35);
+      color: var(--card-fg, var(--ink));
+      font-weight: 950;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    :root:not([data-theme="dark"]) .author-btn,
+    :root:not([data-theme="dark"]) .comment-author {
+      color: #111;
+    }
+
+    .card .author-btn,
+    .card .comment-author,
+    .card .author-btn span:not(.ip-tag):not(.level-tag),
+    .card .comment-author span:not(.ip-tag):not(.level-tag) {
+      color: #111 !important;
+    }
+
+    .ip-tag,
+    .level-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: rgba(49,44,35,.08);
+      color: color-mix(in srgb, var(--card-fg, #1d1c18) 72%, transparent);
+      font-size: .72rem;
+      font-weight: 850;
+    }
+
+    .level-5 { color: #496c58 !important; }
+    .level-10 { color: #536d82 !important; }
+    .level-20 { color: #9b7744 !important; }
+    .level-30 { color: #a64d3f !important; }
+
+    :root[data-theme="dark"] .level-5 { color: #9bb89f !important; }
+    :root[data-theme="dark"] .level-10 { color: #9fb9ce !important; }
+    :root[data-theme="dark"] .level-20 { color: #d6b775 !important; }
+    :root[data-theme="dark"] .level-30 { color: #e19a8a !important; }
+
+    .message {
+      margin: 16px 0 14px;
+      min-height: 86px;
+      font-size: clamp(1.02rem, 1.45vw, 1.28rem);
+      line-height: 1.45;
+      font-weight: 900;
+      overflow-wrap: anywhere;
+    }
+
+    .board .message {
+      font-family: "Comic Sans MS", "Bradley Hand ITC", "Segoe Print", cursive;
+      text-shadow: 0 0 1px currentColor;
+      transform: rotate(-.25deg);
+    }
+
+    .censored {
+      display: inline-block;
+      padding: 0 .28em;
+      border-radius: 6px;
+      background: rgba(25,28,35,.12);
+      color: currentColor;
+    }
+
+    .card-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-top: 1px solid rgba(25,28,35,.1);
+      background: rgba(248,243,231,.26);
+    }
+
+    .react {
+      min-height: 44px;
+      border-right: 1px solid rgba(25,28,35,.09);
+      background: transparent;
+      color: var(--card-fg, var(--ink));
+      font-size: .86rem;
+      font-weight: 950;
+    }
+
+    .react:last-child {
+      border-right: 0;
+    }
+
+    .comments {
+      display: none;
+      border-top: 1px solid rgba(25,28,35,.1);
+      padding: 11px 12px 12px;
+      background: rgba(255,255,255,.34);
+    }
+
+    :root[data-theme="dark"] .comments {
+      background: rgba(0,0,0,.12);
+      border-top-color: rgba(243,239,229,.12);
+    }
+
+    .comments.open {
+      display: grid;
+      gap: 9px;
+    }
+
+    .comment-list {
+      display: grid;
+      gap: 7px;
+      max-height: 142px;
+      overflow: auto;
+    }
+
+    .comment {
+      display: grid;
+      gap: 3px;
+      padding: 8px;
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.36);
+      font-size: .82rem;
+      line-height: 1.35;
+    }
+
+    :root[data-theme="dark"] .comment {
+      background: rgba(255,255,255,.08);
+    }
+
+    .comment button {
+      justify-self: start;
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      font-size: .76rem;
+      font-weight: 950;
+    }
+
+    .comment-form {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+    }
+
+    .comment-form button,
+    .small-btn {
+      min-width: 48px;
+      border-radius: var(--radius);
+      background: var(--ink);
+      color: #fff;
+      font-weight: 950;
+    }
+
+    :root[data-theme="dark"] .submit,
+    :root[data-theme="dark"] .small-btn,
+    :root[data-theme="dark"] .comment-form button {
+      background: #f3efe5;
+      color: #151613;
+      border: 1px solid #f3efe5;
+    }
+
+    .side-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .meter-wrap {
+      padding: 15px;
+    }
+
+    .meter-top {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 11px;
+    }
+
+    .meter-score {
+      font-size: 2.3rem;
+      font-weight: 950;
+      line-height: 1;
+    }
+
+    .bar {
+      height: 14px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(25,28,35,.1);
+    }
+
+    .bar > span {
+      display: block;
+      height: 100%;
+      width: 40%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--green), var(--gold), var(--red));
+      transition: width .25s ease;
+    }
+
+    .profile,
+    .account,
+    .stat-list,
+    .goal-list {
+      display: grid;
+      gap: 9px;
+      padding: 13px 15px 15px;
+      margin: 0;
+      list-style: none;
+    }
+
+    .profile-item,
+    .account-item,
+    .stat,
+    .goal {
+      display: grid;
+      gap: 5px;
+      padding: 11px;
+      border: 1px solid rgba(25,28,35,.1);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.48);
+      color: var(--ink);
+      font-size: .86rem;
+      line-height: 1.38;
+    }
+
+    :root[data-theme="dark"] .profile-item,
+    :root[data-theme="dark"] .account-item,
+    :root[data-theme="dark"] .stat,
+    :root[data-theme="dark"] .goal {
+      border-color: rgba(243,239,229,.14);
+      background: #24251f;
+      color: #f3efe5;
+    }
+
+    .profile-item strong,
+    .account-item strong,
+    .stat strong,
+    .goal strong {
+      font-size: .88rem;
+    }
+
+    .profile-item span,
+    .account-item span,
+    .stat span,
+    .goal span {
+      color: var(--muted);
+      font-size: .78rem;
+    }
+
+    .goal-meter {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(25,28,35,.1);
+    }
+
+    .goal-meter span {
+      display: block;
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: var(--green);
+    }
+
+    .xp-bar {
+      height: 9px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(25,28,35,.1);
+    }
+
+    .xp-bar span {
+      display: block;
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--green), var(--gold));
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      z-index: 10;
+      transform: translateX(-50%) translateY(24px);
+      opacity: 0;
+      pointer-events: none;
+      min-width: min(420px, calc(100vw - 28px));
+      padding: 12px 14px;
+      border: 1px solid rgba(25,28,35,.14);
+      border-radius: var(--radius);
+      background: rgba(23,25,31,.96);
+      color: #fff;
+      box-shadow: var(--shadow);
+      text-align: center;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .site-footer {
+      width: min(1360px, 100%);
+      margin: 22px auto 0;
+      padding: 18px clamp(14px, 2.4vw, 30px) 0;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: .82rem;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1120px) {
+      .layout {
+        grid-template-columns: minmax(290px, 360px) minmax(0, 1fr);
+      }
+
+      .side-stack {
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 780px) {
+      .topbar,
+      .feed-head {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .layout,
+      .side-stack,
+      .feed {
+        grid-template-columns: 1fr;
+      }
+
+      .split {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <h1><a class="home-link" href="./index.html" aria-label="MBOUT.NET 홈">MBOUT.NET</a></h1>
+        <p class="lead">
+          <span>한국 축구, 팬들의 문제는 없는가?</span>
+          <span>팬들의 목소리를 들어보겠습니다.</span>
+        </p>
+      </div>
+      <div class="top-actions">
+        <button class="theme-toggle" id="themeToggle" type="button">다크모드</button>
+        <div class="live-chip"><span class="dot"></span><span id="liveCount">현재 1명 접속 중</span></div>
+      </div>
+    </header>
+
+    <section class="layout">
+      <aside class="panel">
+        <div class="panel-header">
+          <h2>글쓰기</h2>
+          <span class="mini">익명 번호 자동 부여</span>
+        </div>
+        <form id="postForm" class="composer">
+          <div class="field">
+            <label>작성 방식</label>
+            <div class="mode-row" id="modeRow">
+              <button type="button" class="active" data-mode="guest">비로그인</button>
+              <button type="button" data-mode="member">로그인</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="nickname">닉네임</label>
+            <input id="nickname" maxlength="12" placeholder="붉은전술가" autocomplete="off" />
+          </div>
+          <div class="field" id="passwordField">
+            <label for="postPassword">비밀번호</label>
+            <input id="postPassword" type="password" maxlength="24" placeholder="삭제/수정용 비밀번호" autocomplete="new-password" />
+          </div>
+          <div class="field">
+            <label for="message">목소리</label>
+            <textarea id="message" maxlength="180" placeholder="오늘 경기에서 팬들이 답답했던 지점, 감독 운영, 선수 기용, 응원 문화까지 자유롭게 적어주세요."></textarea>
+          </div>
+          <div class="field">
+            <label>카드 스타일</label>
+            <div class="style-row" id="styleRow">
+              <button type="button" class="active" data-style="paper">기본</button>
+              <button type="button" data-style="board">칠판</button>
+              <button type="button" data-style="bold">강조</button>
+            </div>
+          </div>
+          <div class="split">
+            <div class="field">
+              <label for="bgColor">배경색</label>
+              <input id="bgColor" type="color" value="#f8f3e7" />
+            </div>
+            <div class="field">
+              <label for="textColor">글자색</label>
+              <input id="textColor" type="color" value="#1d1c18" />
+            </div>
+          </div>
+          <button class="submit" type="submit">피드에 올리기</button>
+          <p class="notice" id="notice">위협, 개인정보, 차별 표현은 올릴 수 없습니다.</p>
+        </form>
+      </aside>
+
+      <section>
+        <div class="feed-head">
+          <div class="feed-title">
+            <strong id="feedTitle">전체 피드</strong>
+            <button class="clear-filter" id="clearFilter" type="button">전체 보기</button>
+          </div>
+          <span class="mini" id="feedMeta">오늘 0개 · 댓글 0개</span>
+        </div>
+        <div class="feed" id="feed"></div>
+      </section>
+
+      <aside class="side-stack">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>팬 온도</h2>
+            <span class="mini">실시간 접속 기준</span>
+          </div>
+          <div class="meter-wrap">
+            <div class="meter-top">
+              <div>
+                <div class="meter-score" id="heatScore">0</div>
+                <div class="mini" id="onlineText">현재 1명 접속 중</div>
+              </div>
+              <div class="mini" id="heatLabel">조용함</div>
+            </div>
+            <div class="bar"><span id="heatBar"></span></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>작성자</h2>
+            <span class="mini" id="profileCount">선택 없음</span>
+          </div>
+          <div class="profile" id="profile"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>오늘의 목표</h2>
+            <span class="mini" id="goalSummary">0/3</span>
+          </div>
+          <ul class="goal-list" id="goals"></ul>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>계정</h2>
+            <span class="mini" id="accountMode">비로그인</span>
+          </div>
+          <div class="account" id="account"></div>
+        </section>
+      </aside>
+    </section>
+    <footer class="site-footer">
+      이 웹사이트는 특정 개인에 대한 비난이나 비판을 종용하는 것이 아닌 한국 축구의 발전을 위한 목적으로 만들어진 웹사이트입니다.
+    </footer>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const storageKey = "mbout-feed-v2";
+    const oldStorageKey = "coach-critique-feed-v1";
+    const identityKey = "mbout-identity-v2";
+    const registryKey = "mbout-author-registry-v2";
+    const accountKey = "mbout-account-v2";
+    const themeKey = "mbout-theme-v2";
+    const goalAwardKey = "mbout-goal-awards-v2";
+    const serviceConfig = {
+      supabaseUrl: String(globalThis.MBOUT_CONFIG?.supabaseUrl || "").trim(),
+      supabaseAnonKey: String(globalThis.MBOUT_CONFIG?.supabaseAnonKey || "").trim()
+    };
+    const goalXp = {
+      likes10: 60,
+      comments50: 110,
+      posts3: 45
+    };
+    const slurWords = ["씨발", "시발", "개새끼", "병신", "좆", "지랄", "꺼져", "죽어", "새끼", "븅신"];
+    const blockWords = ["살해", "죽이", "테러", "칼", "집주소", "전화번호", "가족", "주소", "번호"];
+    const styleDefaults = {
+      paper: { bg: "#f8f3e7", fg: "#1d1c18" },
+      board: { bg: "#36584a", fg: "#f4efdf" },
+      bold: { bg: "#f4e8df", fg: "#1d1c18" }
+    };
+    const darkStyleDefaults = {
+      paper: { bg: "#24251f", fg: "#f3efe5" },
+      board: { bg: "#243f35", fg: "#f4efdf" },
+      bold: { bg: "#332521", fg: "#f3efe5" }
+    };
+
+    const seedPosts = [
+      seedPost("붉은전술가", 1, "paper", "#f8f3e7", "#1d1c18", "한국 축구가 늘 감독 한 명에게만 모든 감정을 쏟는 구조도 돌아봐야 한다. 그래도 오늘 교체 타이밍은 납득하기 어려웠다.", 28, [
+        seedComment("상암메모장", 1, "동의. 비판은 해야 하는데 선수 보호도 같이 갔으면 좋겠음.")
+      ], 7),
+      seedPost("붉은전술가", 2, "board", "#36584a", "#f4efdf", "칠판에 다시 써보자. 압박이 풀릴 때 중원이 비는 문제, 왜 매번 같은 장면으로 보이는지 설명이 필요하다.", 19, [
+        seedComment("라인관찰자", 1, "이건 진짜 경기마다 반복되는 느낌.")
+      ], 18),
+      seedPost("상암메모장", 1, "bold", "#f4e8df", "#1d1c18", "패배보다 답답한 건 대화가 없다는 점이다. 팬들이 묻는 질문에 축구적으로 답하는 장면이 더 많아졌으면 한다.", 34, [], 31),
+      seedPost("라인관찰자", 1, "paper", "#eef1eb", "#1d1c18", "팬들도 감정만 던지는 문화에서 벗어날 필요가 있다. 대신 대표팀 운영은 더 구체적으로 검증받아야 한다.", 22, [], 49)
+    ];
+
+    let posts = loadPosts();
+    let selectedStyle = "paper";
+    let currentMode = "guest";
+    let activeAuthorId = null;
+    let onlineCount = 1;
+    let presenceMode = serviceConfig.supabaseUrl && serviceConfig.supabaseAnonKey ? "connecting" : "local";
+    let serviceClient = null;
+    let remoteRefreshTimer = null;
+
+    const feed = document.querySelector("#feed");
+    const postForm = document.querySelector("#postForm");
+    const toast = document.querySelector("#toast");
+    const notice = document.querySelector("#notice");
+    const nicknameInput = document.querySelector("#nickname");
+    const passwordInput = document.querySelector("#postPassword");
+    const bgColorInput = document.querySelector("#bgColor");
+    const textColorInput = document.querySelector("#textColor");
+    const clearFilter = document.querySelector("#clearFilter");
+    const themeToggle = document.querySelector("#themeToggle");
+
+    applyStoredTheme();
+
+    document.querySelectorAll("#styleRow button").forEach((button) => {
+      button.addEventListener("click", () => {
+        selectedStyle = button.dataset.style;
+        document.querySelectorAll("#styleRow button").forEach((item) => item.classList.toggle("active", item === button));
+        applyStyleDefaults(selectedStyle);
+      });
+    });
+
+    document.querySelectorAll("#modeRow button").forEach((button) => {
+      button.addEventListener("click", () => {
+        currentMode = button.dataset.mode;
+        document.querySelectorAll("#modeRow button").forEach((item) => item.classList.toggle("active", item === button));
+        document.querySelector("#accountMode").textContent = currentMode === "member" ? "로그인" : "비로그인";
+        renderAccount();
+      });
+    });
+
+    themeToggle.addEventListener("click", () => {
+      const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      setTheme(next);
+    });
+
+    clearFilter.addEventListener("click", () => {
+      activeAuthorId = null;
+      render();
+    });
+
+    [nicknameInput, passwordInput].forEach((input) => {
+      input.addEventListener("input", () => renderAccount());
+    });
+
+    postForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const rawText = document.querySelector("#message").value.trim();
+      const validation = validateText(rawText);
+      if (!validation.ok) {
+        notice.textContent = validation.message;
+        pulseNotice();
+        return;
+      }
+
+      const password = passwordInput.value.trim();
+      if (!password) {
+        notice.textContent = "비밀번호를 입력해주세요.";
+        pulseNotice();
+        return;
+      }
+      const author = resolveAuthor(nicknameInput.value.trim() || "익명팬", password, currentMode);
+      const colors = currentStyleDefaults()[selectedStyle] || currentStyleDefaults().paper;
+      const post = {
+        id: makeId(),
+        authorId: author.id,
+        authorBase: author.base,
+        authorName: author.name,
+        authorType: author.type,
+        authorIp: author.ip,
+        authorLevel: author.level || 0,
+        authorVerified: author.verified === true,
+        style: selectedStyle,
+        bgColor: safeHex(bgColorInput.value, colors.bg),
+        textColor: safeHex(textColorInput.value, colors.fg),
+        text: censor(rawText),
+        likes: 0,
+        comments: [],
+        createdAt: Date.now()
+      };
+
+      posts.unshift(post);
+      posts = posts.slice(0, 80);
+      await persistPost(post);
+      postForm.reset();
+      selectedStyle = "paper";
+      document.querySelectorAll("#styleRow button").forEach((item) => item.classList.toggle("active", item.dataset.style === "paper"));
+      applyStyleDefaults("paper");
+      notice.textContent = `${author.name}으로 올라갔습니다.`;
+      showToast("피드에 올라갔습니다.");
+      render();
+    });
+
+    function seedPost(base, number, style, bgColor, textColor, text, likes, comments, minutesAgo) {
+      return {
+        id: makeId(),
+        authorId: `seed-${base}-${number}`,
+        authorBase: base,
+        authorName: `${base}${number}`,
+        authorType: "member",
+        authorIp: "",
+        authorLevel: number === 1 ? 2 : 1,
+        authorVerified: true,
+        style,
+        bgColor,
+        textColor,
+        text: escapeHtml(text),
+        likes,
+        comments,
+        createdAt: Date.now() - minutesAgo * 60000
+      };
+    }
+
+    function seedComment(base, number, text) {
+      return {
+        id: makeId(),
+        authorId: `seed-${base}-${number}`,
+        authorBase: base,
+        authorName: `${base}${number}`,
+        authorType: "member",
+        authorIp: "",
+        authorLevel: 1,
+        authorVerified: true,
+        text: escapeHtml(text),
+        createdAt: Date.now() - 5 * 60000
+      };
+    }
+
+    function loadPosts() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+        if (Array.isArray(saved) && saved.length) return normalizePosts(saved);
+        const old = JSON.parse(localStorage.getItem(oldStorageKey) || "null");
+        if (Array.isArray(old) && old.length) return normalizePosts(old.map(convertOldPost));
+        return normalizePosts(seedPosts);
+      } catch {
+        return normalizePosts(seedPosts);
+      }
+    }
+
+    function convertOldPost(post, index) {
+      const base = String(post.nick || "익명팬").replace(/<[^>]*>/g, "").replace(/\d+$/, "") || "익명팬";
+      return {
+        id: post.id || makeId(),
+        authorId: `old-${index + 1}-${makeId()}`,
+        authorBase: base,
+        authorName: `${base}${index + 1}`,
+        authorType: "guest",
+        authorIp: maskedIp(),
+        authorLevel: 0,
+        authorVerified: false,
+        style: post.theme === "chalk" ? "board" : "paper",
+        bgColor: remapLegacyColor(post.bgColor || "#f8f3e7"),
+        textColor: remapLegacyColor(post.textColor || "#1d1c18"),
+        text: post.text || "",
+        likes: Array.isArray(post.reactions) ? post.reactions[0] || 0 : 0,
+        comments: [],
+        createdAt: post.createdAt || Date.now()
+      };
+    }
+
+    function normalizePosts(items) {
+      return items.map((post, index) => {
+        const style = ["paper", "board", "bold"].includes(post.style) ? post.style : "paper";
+        const colors = styleDefaults[style];
+        const base = escapeHtml(String(post.authorBase || post.nick || "익명팬").replace(/<[^>]*>/g, "").replace(/\d+$/, "") || "익명팬");
+        const authorName = escapeHtml(post.authorName || `${base}${index + 1}`);
+        return {
+          id: post.id || makeId(),
+          authorId: post.authorId || `legacy-${index}`,
+          authorBase: base,
+          authorName,
+          authorType: post.authorType === "member" ? "member" : "guest",
+          authorIp: post.authorIp || (post.authorType === "member" ? "" : maskedIp()),
+          authorLevel: Number.isFinite(post.authorLevel) ? post.authorLevel : (post.authorType === "member" ? 1 : 0),
+          authorVerified: post.authorVerified === true || post.authorType === "member",
+          style,
+          bgColor: safeHex(remapLegacyColor(post.bgColor), colors.bg),
+          textColor: safeHex(remapLegacyColor(post.textColor), colors.fg),
+          text: post.text || "",
+          likes: Number.isFinite(post.likes) ? post.likes : 0,
+          comments: Array.isArray(post.comments) ? post.comments.map(normalizeComment) : [],
+          createdAt: post.createdAt || Date.now()
+        };
+      });
+    }
+
+    function normalizeComment(comment, index) {
+      const base = escapeHtml(String(comment.authorBase || "익명팬").replace(/<[^>]*>/g, "").replace(/\d+$/, "") || "익명팬");
+      return {
+        id: comment.id || makeId(),
+        authorId: comment.authorId || `comment-${index}`,
+        authorBase: base,
+        authorName: escapeHtml(comment.authorName || `${base}${index + 1}`),
+        authorType: comment.authorType === "member" ? "member" : "guest",
+        authorIp: comment.authorIp || (comment.authorType === "member" ? "" : maskedIp()),
+        authorLevel: Number.isFinite(comment.authorLevel) ? comment.authorLevel : (comment.authorType === "member" ? 1 : 0),
+        authorVerified: comment.authorVerified === true || comment.authorType === "member",
+        text: comment.text || "",
+        createdAt: comment.createdAt || Date.now()
+      };
+    }
+
+    function savePosts() {
+      localStorage.setItem(storageKey, JSON.stringify(posts));
+    }
+
+    function resolveAuthor(rawBase, password, mode) {
+      const base = escapeHtml(rawBase.replace(/\s+/g, "").replace(/\d+$/, "").slice(0, 12) || "익명팬");
+      const clientId = getClientId();
+      const registry = loadRegistry();
+      const safePassword = simpleHash(`${base}:${password}`);
+      const key = `${mode}::${base}::${mode === "member" ? safePassword : clientId}`;
+      registry.counts[base] = registry.counts[base] || existingMaxNumber(base);
+      if (!registry.authors[key]) {
+        if (mode === "guest") registry.counts[base] += 1;
+        const account = mode === "member" ? loadAccount(base, safePassword) : null;
+        const number = mode === "member" ? "" : registry.counts[base];
+        registry.authors[key] = {
+          id: mode === "member" ? `member-${safePassword}` : `guest-${registry.counts[base]}-${clientId}`,
+          base,
+          number,
+          name: mode === "member" ? base : `${base}${number}`,
+          type: mode,
+          ip: mode === "member" ? "" : maskedIp(),
+          level: account?.level || 1,
+          verified: mode === "member"
+        };
+        localStorage.setItem(registryKey, JSON.stringify(registry));
+      }
+      const author = registry.authors[key];
+      if (mode === "member") {
+        const account = ensureAccount(base, safePassword);
+        author.name = account.nick;
+        author.level = account.level;
+        author.verified = true;
+        author.type = "member";
+        author.ip = "";
+        localStorage.setItem(registryKey, JSON.stringify(registry));
+      }
+      return author;
+    }
+
+    function existingMaxNumber(base) {
+      const re = new RegExp(`^${escapeRegExp(base)}(\\d+)$`);
+      return posts.reduce((max, post) => {
+        const match = String(post.authorName || "").match(re);
+        return match ? Math.max(max, Number(match[1])) : max;
+      }, 0);
+    }
+
+    function getClientId() {
+      let id = localStorage.getItem(identityKey);
+      if (!id) {
+        id = makeId();
+        localStorage.setItem(identityKey, id);
+      }
+      return id;
+    }
+
+    function loadRegistry() {
+      try {
+        const registry = JSON.parse(localStorage.getItem(registryKey) || "null");
+        if (registry && registry.counts && registry.authors) return registry;
+      } catch {}
+      return { counts: {}, authors: {} };
+    }
+
+    function loadAccounts() {
+      try {
+        const accounts = JSON.parse(localStorage.getItem(accountKey) || "null");
+        if (accounts && typeof accounts === "object") return accounts;
+      } catch {}
+      return {};
+    }
+
+    function loadAccount(nick, passwordHash) {
+      const base = escapeHtml(String(nick || "익명팬").replace(/\s+/g, "").replace(/\d+$/, "").slice(0, 12) || "익명팬");
+      return loadAccounts()[`member-${simpleHash(`${base}:${passwordHash}`)}`] || loadAccounts()[`member-${passwordHash}`] || null;
+    }
+
+    function ensureAccount(nick, passwordHash) {
+      const base = escapeHtml(String(nick || "익명팬").replace(/\s+/g, "").replace(/\d+$/, "").slice(0, 12) || "익명팬");
+      const accounts = loadAccounts();
+      const id = `member-${passwordHash}`;
+      if (!accounts[id]) {
+        accounts[id] = {
+          id,
+          nick: base,
+          passwordHash,
+          level: 1,
+          xp: 0,
+          createdAt: Date.now()
+        };
+        localStorage.setItem(accountKey, JSON.stringify(accounts));
+      }
+      return accounts[id];
+    }
+
+    function saveAccount(account) {
+      const accounts = loadAccounts();
+      accounts[account.id] = account;
+      localStorage.setItem(accountKey, JSON.stringify(accounts));
+    }
+
+    function syncMemberAuthor(account) {
+      posts.forEach((post) => {
+        if (post.authorId === account.id) {
+          post.authorLevel = account.level;
+          post.authorVerified = true;
+        }
+        post.comments.forEach((comment) => {
+          if (comment.authorId === account.id) {
+            comment.authorLevel = account.level;
+            comment.authorVerified = true;
+          }
+        });
+      });
+      savePosts();
+    }
+
+    function loadGoalAwards() {
+      try {
+        const awards = JSON.parse(localStorage.getItem(goalAwardKey) || "null");
+        if (awards && typeof awards === "object") return awards;
+      } catch {}
+      return {};
+    }
+
+    function xpForNext(level) {
+      const lv = Math.max(1, Number(level || 1));
+      if (lv < 5) return 70 + lv * 20;
+      if (lv < 10) return 170 + (lv - 5) * 45;
+      if (lv < 20) return 420 + (lv - 10) * 85;
+      if (lv < 30) return 1250 + (lv - 20) * 150;
+      return 3000 + (lv - 30) * 260;
+    }
+
+    function validateText(text) {
+      if (text.length < 8) return { ok: false, message: "조금 더 구체적으로 써주세요." };
+      if (blockWords.some((word) => text.includes(word))) return { ok: false, message: "위협, 개인정보, 가족 언급은 올릴 수 없습니다." };
+      return { ok: true };
+    }
+
+    function censor(text) {
+      let output = escapeHtml(text);
+      slurWords.forEach((word) => {
+        output = output.replace(new RegExp(escapeRegExp(word), "gi"), `<span class="censored">${"삐".repeat(Math.min(3, word.length))}</span>`);
+      });
+      return output;
+    }
+
+    function render() {
+      const visiblePosts = activeAuthorId ? posts.filter((post) => post.authorId === activeAuthorId || post.comments.some((comment) => comment.authorId === activeAuthorId)) : posts;
+      feed.innerHTML = visiblePosts.map(cardTemplate).join("");
+      document.querySelectorAll(".like-btn").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const post = posts.find((item) => item.id === button.closest(".card").dataset.id);
+          if (!post) return;
+          post.likes += 1;
+          await persistLike(post);
+          render();
+        });
+      });
+      document.querySelectorAll(".comment-toggle").forEach((button) => {
+        button.addEventListener("click", () => {
+          const box = button.closest(".card").querySelector(".comments");
+          box.classList.toggle("open");
+        });
+      });
+      document.querySelectorAll(".comment-form").forEach((form) => {
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const post = posts.find((item) => item.id === form.closest(".card").dataset.id);
+          const input = form.querySelector("input");
+          const text = input.value.trim();
+          const validation = validateComment(text);
+          if (!post || !validation.ok) {
+            showToast(validation.message || "댓글을 등록할 수 없습니다.");
+            return;
+          }
+          const password = passwordInput.value.trim();
+          if (!password) {
+            showToast("댓글도 비밀번호가 필요합니다.");
+            return;
+          }
+          const author = resolveAuthor(nicknameInput.value.trim() || "익명팬", password, currentMode);
+          const comment = {
+            id: makeId(),
+            authorId: author.id,
+            authorBase: author.base,
+            authorName: author.name,
+            authorType: author.type,
+            authorIp: author.ip,
+            authorLevel: author.level || 0,
+            authorVerified: author.verified === true,
+            text: censor(text),
+            createdAt: Date.now()
+          };
+          post.comments.push(comment);
+          input.value = "";
+          await persistComment(post.id, comment);
+          render();
+        });
+      });
+      document.querySelectorAll(".author-btn, .comment-author").forEach((button) => {
+        button.addEventListener("click", () => {
+          activeAuthorId = button.dataset.author;
+          render();
+        });
+      });
+      renderStats();
+      renderProfile();
+      renderGoals();
+      renderAccount();
+    }
+
+    function validateComment(text) {
+      if (text.length < 2) return { ok: false, message: "댓글을 조금 더 써주세요." };
+      if (blockWords.some((word) => text.includes(word))) return { ok: false, message: "위험한 표현은 댓글로 남길 수 없습니다." };
+      return { ok: true };
+    }
+
+    function cardTemplate(post) {
+      const comments = post.comments || [];
+      return `
+        <article class="card ${post.style}" data-id="${escapeAttr(post.id)}" style="--card-bg:${safeHex(post.bgColor, styleDefaults[post.style].bg)};--card-fg:${safeHex(post.textColor, styleDefaults[post.style].fg)}">
+          <div class="card-main">
+            <div class="card-meta">
+              <button class="author-btn" type="button" data-author="${escapeAttr(post.authorId)}">${authorLabel(post)}</button>
+              <span>${relativeTime(post.createdAt)}</span>
+            </div>
+            <p class="message">${post.text}</p>
+            <div class="card-meta">
+              <span>${styleName(post.style)}</span>
+              <span>댓글 ${comments.length}</span>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button class="react like-btn" type="button">공감 ${post.likes}</button>
+            <button class="react comment-toggle" type="button">댓글 ${comments.length}</button>
+          </div>
+          <div class="comments">
+            <div class="comment-list">
+              ${comments.length ? comments.map(commentTemplate).join("") : `<div class="comment"><span>아직 댓글이 없습니다.</span></div>`}
+            </div>
+            <form class="comment-form">
+              <input maxlength="80" placeholder="댓글 쓰기" />
+              <button type="submit">등록</button>
+            </form>
+          </div>
+        </article>
+      `;
+    }
+
+    function commentTemplate(comment) {
+      return `
+        <div class="comment">
+          <button class="comment-author" type="button" data-author="${escapeAttr(comment.authorId)}">${authorLabel(comment)}</button>
+          <span>${comment.text}</span>
+        </div>
+      `;
+    }
+
+    function authorLabel(author) {
+      const name = escapeHtml(author.authorName || "익명팬");
+      if (author.authorVerified || author.authorType === "member") {
+        const level = Math.max(1, Number(author.authorLevel || 1));
+        return `<span class="${levelClass(level)}">${name}</span><span class="level-tag">Lv.${level}</span>`;
+      }
+      return `${name}<span class="ip-tag">IP ${escapeHtml(author.authorIp || maskedIp())}</span>`;
+    }
+
+    function renderStats() {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todaysPosts = posts.filter((post) => post.createdAt >= todayStart.getTime());
+      const commentCount = posts.reduce((sum, post) => sum + post.comments.length, 0);
+      const todayComments = posts.reduce((sum, post) => {
+        return sum + post.comments.filter((comment) => comment.createdAt >= todayStart.getTime()).length;
+      }, 0);
+      const online = Math.max(1, onlineCount);
+      const heat = Math.min(100, Math.round(16 + online * 3 + todaysPosts.length * 4 + todayComments * 1.5));
+      document.querySelector("#heatScore").textContent = heat;
+      document.querySelector("#heatBar").style.width = `${heat}%`;
+      document.querySelector("#onlineText").textContent = presenceMode === "live"
+        ? `실시간 접속 ${online.toLocaleString("ko-KR")}명`
+        : "현재 이 브라우저 1명 접속 중";
+      document.querySelector("#heatLabel").textContent = heat > 78 ? "매우 활발" : heat > 52 ? "활발" : "조용함";
+      document.querySelector("#liveCount").textContent = `현재 ${online.toLocaleString("ko-KR")}명 접속 중`;
+      document.querySelector("#feedMeta").textContent = `오늘 ${todaysPosts.length}개 · 댓글 ${commentCount}개`;
+    }
+
+    async function initService() {
+      if (!serviceConfig.supabaseUrl || !serviceConfig.supabaseAnonKey) {
+        presenceMode = "local";
+        renderStats();
+        return;
+      }
+
+      try {
+        const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm");
+        serviceClient = createClient(serviceConfig.supabaseUrl, serviceConfig.supabaseAnonKey);
+        initPresence(serviceClient);
+        await loadRemoteFeed();
+        subscribeRemoteFeed();
+      } catch {
+        presenceMode = "local";
+        onlineCount = 1;
+        renderStats();
+      }
+    }
+
+    function initPresence(supabase) {
+      const channel = supabase.channel("mbout-online", {
+        config: { presence: { key: getClientId() } }
+      });
+
+      channel.on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState();
+        onlineCount = Object.values(state).reduce((sum, users) => sum + users.length, 0) || 1;
+        presenceMode = "live";
+        renderStats();
+      });
+
+      channel.subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({ online_at: new Date().toISOString() });
+          presenceMode = "live";
+          renderStats();
+        }
+      });
+
+      window.addEventListener("beforeunload", () => {
+        channel.untrack();
+      });
+    }
+
+    async function loadRemoteFeed() {
+      if (!serviceClient) return;
+      const { data: remotePosts, error } = await serviceClient
+        .from("posts")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(80);
+
+      if (error) throw error;
+
+      const ids = (remotePosts || []).map((post) => post.id);
+      let remoteComments = [];
+      if (ids.length) {
+        const commentsResult = await serviceClient
+          .from("comments")
+          .select("*")
+          .in("post_id", ids)
+          .order("created_at", { ascending: true });
+        if (!commentsResult.error) remoteComments = commentsResult.data || [];
+      }
+
+      const commentsByPost = remoteComments.reduce((map, comment) => {
+        map[comment.post_id] = map[comment.post_id] || [];
+        map[comment.post_id].push(fromRemoteComment(comment));
+        return map;
+      }, {});
+
+      posts = (remotePosts || []).map((post) => ({
+        ...fromRemotePost(post),
+        comments: commentsByPost[post.id] || []
+      }));
+      savePosts();
+      render();
+    }
+
+    function subscribeRemoteFeed() {
+      if (!serviceClient) return;
+      serviceClient.channel("mbout-feed")
+        .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, scheduleRemoteRefresh)
+        .on("postgres_changes", { event: "*", schema: "public", table: "comments" }, scheduleRemoteRefresh)
+        .subscribe();
+    }
+
+    function scheduleRemoteRefresh() {
+      clearTimeout(remoteRefreshTimer);
+      remoteRefreshTimer = setTimeout(() => {
+        loadRemoteFeed().catch(() => {});
+      }, 350);
+    }
+
+    async function persistPost(post) {
+      savePosts();
+      if (!serviceClient) return;
+      await serviceClient.from("posts").upsert(toRemotePost(post));
+    }
+
+    async function persistLike(post) {
+      savePosts();
+      if (!serviceClient) return;
+      await serviceClient.from("posts").update({ likes: post.likes }).eq("id", post.id);
+    }
+
+    async function persistComment(postId, comment) {
+      savePosts();
+      if (!serviceClient) return;
+      await serviceClient.from("comments").insert(toRemoteComment(postId, comment));
+    }
+
+    function toRemotePost(post) {
+      return {
+        id: post.id,
+        author_id: post.authorId,
+        author_base: post.authorBase,
+        author_name: post.authorName,
+        author_type: post.authorType || "guest",
+        author_ip: post.authorIp || "",
+        author_level: post.authorLevel || 0,
+        author_verified: post.authorVerified === true,
+        style: post.style,
+        bg_color: post.bgColor,
+        text_color: post.textColor,
+        body_html: post.text,
+        likes: post.likes,
+        created_at: new Date(post.createdAt).toISOString()
+      };
+    }
+
+    function fromRemotePost(post) {
+      return {
+        id: post.id,
+        authorId: post.author_id,
+        authorBase: post.author_base,
+        authorName: post.author_name,
+        authorType: post.author_type || "guest",
+        authorIp: post.author_ip || "",
+        authorLevel: post.author_level || 0,
+        authorVerified: post.author_verified === true,
+        style: post.style,
+        bgColor: post.bg_color,
+        textColor: post.text_color,
+        text: post.body_html,
+        likes: post.likes || 0,
+        comments: [],
+        createdAt: new Date(post.created_at).getTime()
+      };
+    }
+
+    function toRemoteComment(postId, comment) {
+      return {
+        id: comment.id,
+        post_id: postId,
+        author_id: comment.authorId,
+        author_base: comment.authorBase,
+        author_name: comment.authorName,
+        author_type: comment.authorType || "guest",
+        author_ip: comment.authorIp || "",
+        author_level: comment.authorLevel || 0,
+        author_verified: comment.authorVerified === true,
+        body_html: comment.text,
+        created_at: new Date(comment.createdAt).toISOString()
+      };
+    }
+
+    function fromRemoteComment(comment) {
+      return {
+        id: comment.id,
+        authorId: comment.author_id,
+        authorBase: comment.author_base,
+        authorName: comment.author_name,
+        authorType: comment.author_type || "guest",
+        authorIp: comment.author_ip || "",
+        authorLevel: comment.author_level || 0,
+        authorVerified: comment.author_verified === true,
+        text: comment.body_html,
+        createdAt: new Date(comment.created_at).getTime()
+      };
+    }
+
+    function renderGoals() {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todaysPosts = posts.filter((post) => post.createdAt >= todayStart.getTime());
+      const todaysLikes = todaysPosts.reduce((sum, post) => sum + post.likes, 0);
+      const todaysComments = posts.reduce((sum, post) => {
+        return sum + post.comments.filter((comment) => comment.createdAt >= todayStart.getTime()).length;
+      }, 0);
+      const goalData = [
+        { id: "likes10", label: "하트 10개 받기", value: todaysLikes, target: 10, xp: goalXp.likes10 },
+        { id: "comments50", label: "댓글 50개 받기", value: todaysComments, target: 50, xp: goalXp.comments50 },
+        { id: "posts3", label: "글 3개 올라오기", value: todaysPosts.length, target: 3, xp: goalXp.posts3 }
+      ];
+      awardGoalXp(goalData);
+      const complete = goalData.filter((goal) => goal.value >= goal.target).length;
+      document.querySelector("#goalSummary").textContent = `${complete}/3`;
+      document.querySelector("#goals").innerHTML = goalData.map((goal) => {
+        const percent = Math.min(100, Math.round((goal.value / goal.target) * 100));
+        return `
+          <li class="goal">
+            <strong>${goal.label}</strong>
+            <span>${goal.value}/${goal.target} · EXP +${goal.xp}</span>
+            <div class="goal-meter"><span style="width:${percent}%"></span></div>
+          </li>
+        `;
+      }).join("");
+    }
+
+    function awardGoalXp(goalData) {
+      if (currentMode !== "member") return;
+      const password = passwordInput.value.trim();
+      const nick = nicknameInput.value.trim();
+      if (!password || !nick) return;
+
+      const passwordHash = simpleHash(`${nick.replace(/\s+/g, "").replace(/\d+$/, "").slice(0, 12) || "익명팬"}:${password}`);
+      const account = loadAccount(nick, passwordHash);
+      if (!account) return;
+
+      const todayKey = new Date().toISOString().slice(0, 10);
+      const awards = loadGoalAwards();
+      awards[account.id] = awards[account.id] || {};
+      awards[account.id][todayKey] = awards[account.id][todayKey] || {};
+
+      let gained = 0;
+      goalData.forEach((goal) => {
+        if (goal.value >= goal.target && !awards[account.id][todayKey][goal.id]) {
+          awards[account.id][todayKey][goal.id] = true;
+          gained += goal.xp;
+        }
+      });
+
+      if (!gained) return;
+      account.xp += gained;
+      while (account.xp >= xpForNext(account.level)) {
+        account.xp -= xpForNext(account.level);
+        account.level += 1;
+      }
+      saveAccount(account);
+      localStorage.setItem(goalAwardKey, JSON.stringify(awards));
+      syncMemberAuthor(account);
+    }
+
+    function renderAccount() {
+      const accountBox = document.querySelector("#account");
+      const password = passwordInput.value.trim();
+      const nick = nicknameInput.value.trim();
+      const base = nick.replace(/\s+/g, "").replace(/\d+$/, "").slice(0, 12) || "익명팬";
+      document.querySelector("#accountMode").textContent = currentMode === "member" ? "로그인" : "비로그인";
+
+      if (currentMode !== "member") {
+        accountBox.innerHTML = `
+          <div class="account-item">
+            <strong>${escapeHtml(base)} <span class="ip-tag">IP ${maskedIp()}</span></strong>
+            <span>비로그인 글은 닉네임과 비밀번호로 작성됩니다. 카드에는 로그인/비로그인 차별 없이 표시됩니다.</span>
+          </div>
+        `;
+        return;
+      }
+
+      if (!password || !nick) {
+        accountBox.innerHTML = `
+          <div class="account-item">
+            <strong>로그인 준비</strong>
+            <span>닉네임과 비밀번호를 입력하면 로컬 로그인 계정으로 기록됩니다.</span>
+          </div>
+        `;
+        return;
+      }
+
+      const passwordHash = simpleHash(`${base}:${password}`);
+      const account = ensureAccount(base, passwordHash);
+      const needed = xpForNext(account.level);
+      const percent = Math.min(100, Math.round((account.xp / needed) * 100));
+      accountBox.innerHTML = `
+        <div class="account-item">
+          <strong><span class="${levelClass(account.level)}">${account.nick}</span> Lv.${account.level}</strong>
+          <span>EXP ${account.xp}/${needed} · ${levelTitle(account.level)}</span>
+          <div class="xp-bar"><span style="width:${percent}%"></span></div>
+        </div>
+      `;
+    }
+
+    function renderProfile() {
+      const profile = document.querySelector("#profile");
+      const selected = activeAuthorId ? findAuthor(activeAuthorId) : null;
+      document.querySelector("#feedTitle").textContent = selected ? `${selected.name}의 활동` : "전체 피드";
+      clearFilter.classList.toggle("show", !!selected);
+      document.querySelector("#profileCount").textContent = selected ? selected.name : "선택 없음";
+
+      if (!selected) {
+        profile.innerHTML = `
+          <div class="profile-item">
+            <strong>작성자를 눌러보세요</strong>
+            <span>그 사람이 쓴 카드와 댓글이 피드에 모입니다.</span>
+          </div>
+        `;
+        return;
+      }
+
+      const authoredPosts = posts.filter((post) => post.authorId === selected.id);
+      const authoredComments = posts.flatMap((post) => post.comments
+        .filter((comment) => comment.authorId === selected.id)
+        .map((comment) => ({ ...comment, postText: stripTags(post.text).slice(0, 34) })));
+      profile.innerHTML = `
+        <div class="profile-item">
+          <strong>${selected.verified ? `<span class="${levelClass(selected.level)}">${selected.name}</span> Lv.${selected.level}` : `${selected.name} <span class="ip-tag">IP ${selected.ip}</span>`}</strong>
+          <span>작성 카드 ${authoredPosts.length}개 · 작성 댓글 ${authoredComments.length}개</span>
+        </div>
+        ${authoredPosts.slice(0, 3).map((post) => `<div class="profile-item"><strong>카드</strong><span>${stripTags(post.text).slice(0, 58)}</span></div>`).join("")}
+        ${authoredComments.slice(0, 3).map((comment) => `<div class="profile-item"><strong>댓글</strong><span>${stripTags(comment.text).slice(0, 42)} · ${comment.postText}</span></div>`).join("")}
+      `;
+    }
+
+    function findAuthor(authorId) {
+      for (const post of posts) {
+        if (post.authorId === authorId) return { id: post.authorId, name: post.authorName, verified: post.authorVerified, level: post.authorLevel || 0, ip: post.authorIp || maskedIp() };
+        const comment = post.comments.find((item) => item.authorId === authorId);
+        if (comment) return { id: comment.authorId, name: comment.authorName, verified: comment.authorVerified, level: comment.authorLevel || 0, ip: comment.authorIp || maskedIp() };
+      }
+      return null;
+    }
+
+    function levelClass(level) {
+      const lv = Number(level || 1);
+      if (lv >= 30) return "level-30";
+      if (lv >= 20) return "level-20";
+      if (lv >= 10) return "level-10";
+      if (lv >= 5) return "level-5";
+      return "";
+    }
+
+    function levelTitle(level) {
+      const lv = Number(level || 1);
+      if (lv >= 30) return "레전드";
+      if (lv >= 20) return "고인물";
+      if (lv >= 10) return "상주팬";
+      if (lv >= 5) return "단골";
+      return "신입";
+    }
+
+    function styleName(style) {
+      return { paper: "기본", board: "칠판", bold: "강조" }[style] || "기본";
+    }
+
+    function applyStyleDefaults(style) {
+      const colors = currentStyleDefaults()[style] || currentStyleDefaults().paper;
+      bgColorInput.value = colors.bg;
+      textColorInput.value = colors.fg;
+    }
+
+    function currentStyleDefaults() {
+      return document.documentElement.dataset.theme === "dark" ? darkStyleDefaults : styleDefaults;
+    }
+
+    function relativeTime(timestamp) {
+      const minutes = Math.max(0, Math.round((Date.now() - timestamp) / 60000));
+      if (minutes < 1) return "방금";
+      if (minutes < 60) return `${minutes}분 전`;
+      return `${Math.round(minutes / 60)}시간 전`;
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function escapeAttr(text) {
+      return escapeHtml(text).replaceAll("`", "&#096;");
+    }
+
+    function stripTags(text) {
+      const div = document.createElement("div");
+      div.innerHTML = text;
+      return div.textContent || "";
+    }
+
+    function escapeRegExp(text) {
+      return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function safeHex(value, fallback) {
+      return /^#[0-9a-f]{6}$/i.test(String(value || "")) ? value : fallback;
+    }
+
+    function maskedIp() {
+      const seed = simpleHash(getClientId());
+      const a = 10 + (parseInt(seed.slice(0, 2), 16) % 220);
+      const b = parseInt(seed.slice(2, 4), 16) % 256;
+      return `${String(a).padStart(3, "0")}.${String(b).padStart(3, "0")}`;
+    }
+
+    function simpleHash(value) {
+      let hash = 2166136261;
+      String(value).split("").forEach((char) => {
+        hash ^= char.charCodeAt(0);
+        hash = Math.imul(hash, 16777619);
+      });
+      return (hash >>> 0).toString(16).padStart(8, "0");
+    }
+
+    function applyStoredTheme() {
+      setTheme(localStorage.getItem(themeKey) || "light");
+    }
+
+    function setTheme(theme) {
+      const normalized = theme === "dark" ? "dark" : "light";
+      document.documentElement.dataset.theme = normalized === "dark" ? "dark" : "";
+      if (normalized === "light") document.documentElement.removeAttribute("data-theme");
+      themeToggle.textContent = normalized === "dark" ? "라이트모드" : "다크모드";
+      localStorage.setItem(themeKey, normalized);
+      applyStyleDefaults(selectedStyle);
+    }
+
+    function remapLegacyColor(value) {
+      const color = String(value || "").toLowerCase();
+      return {
+        "#fffaf0": "#f8f3e7",
+        "#17191f": "#1d1c18",
+        "#1d4638": "#36584a",
+        "#f4f0d8": "#f4efdf",
+        "#fff4f2": "#f4e8df",
+        "#f6f7fb": "#eef1eb"
+      }[color] || value;
+    }
+
+    function makeId() {
+      if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function") return globalThis.crypto.randomUUID();
+      return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    function pulseNotice() {
+      notice.animate([
+        { transform: "translateX(0)" },
+        { transform: "translateX(-5px)" },
+        { transform: "translateX(5px)" },
+        { transform: "translateX(0)" }
+      ], { duration: 220, easing: "ease-out" });
+    }
+
+    function showToast(text) {
+      toast.textContent = text;
+      toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove("show"), 1700);
+    }
+
+    applyStyleDefaults("paper");
+    render();
+    initService();
+  </script>
+</body>
+</html>
