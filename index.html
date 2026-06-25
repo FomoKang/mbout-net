@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Again 2002</title>
+  <link rel="icon" type="image/png" href="./assets/again2002-logo.png" />
+  <link rel="apple-touch-icon" href="./assets/again2002-logo.png" />
   <script src="./again.config.js"></script>
   <style>
     :root {
@@ -144,10 +146,28 @@
       text-decoration: none;
     }
 
+    .brand-title {
+      display: inline-flex;
+      align-items: center;
+      gap: clamp(10px, 1.4vw, 16px);
+    }
+
+    .brand-logo {
+      width: clamp(58px, 8vw, 108px);
+      height: clamp(58px, 8vw, 108px);
+      object-fit: contain;
+      flex: 0 0 auto;
+      filter: drop-shadow(0 8px 14px rgba(29,28,24,.14));
+    }
+
     .home-link:hover {
       text-decoration: underline;
       text-decoration-thickness: .08em;
       text-underline-offset: .08em;
+    }
+
+    .brand-title:hover {
+      text-decoration: none;
     }
 
     .lead {
@@ -989,7 +1009,12 @@
   <main class="app">
     <header class="topbar">
       <div class="brand">
-        <h1><a class="home-link" href="./index.html" aria-label="Again 2002 홈">Again 2002</a></h1>
+        <h1>
+          <a class="home-link brand-title" href="./index.html" aria-label="Again 2002 홈">
+            <img class="brand-logo" src="./assets/again2002-logo.png" alt="" />
+            <span>Again 2002</span>
+          </a>
+        </h1>
         <p class="lead">
           <span>한국 축구, 팬들의 문제는 없는가?</span>
           <span>팬들의 목소리를 들어보겠습니다.</span>
@@ -1133,6 +1158,7 @@
     const themeKey = "again2002-theme-v1";
     const goalAwardKey = "again2002-goal-awards-v1";
     const reportKey = "again2002-reports-v1";
+    const logoAsset = "./assets/again2002-logo.png";
     const serviceConfig = {
       supabaseUrl: String(globalThis.AGAIN2002_CONFIG?.supabaseUrl || "").trim(),
       supabaseAnonKey: String(globalThis.AGAIN2002_CONFIG?.supabaseAnonKey || "").trim()
@@ -2006,18 +2032,32 @@
       return {};
     }
 
-    function createShareImageBlob(post) {
+    async function createShareImageBlob(post) {
       const canvas = document.createElement("canvas");
       canvas.width = 1080;
       canvas.height = 1920;
       const ctx = canvas.getContext("2d");
-      drawShareImage(ctx, post, canvas.width, canvas.height);
+      const logo = await loadLogoImage().catch(() => null);
+      drawShareImage(ctx, post, canvas.width, canvas.height, logo);
       return new Promise((resolve, reject) => {
         canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("empty image")), "image/png", 0.95);
       });
     }
 
-    function drawShareImage(ctx, post, width, height) {
+    function loadLogoImage() {
+      if (loadLogoImage.cache) return Promise.resolve(loadLogoImage.cache);
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => {
+          loadLogoImage.cache = image;
+          resolve(image);
+        };
+        image.onerror = reject;
+        image.src = logoAsset;
+      });
+    }
+
+    function drawShareImage(ctx, post, width, height, logo) {
       const bg = safeHex(post.bgColor, "#f8f3e7");
       const fg = safeHex(post.textColor, "#1d1c18");
       ctx.fillStyle = "#eee8dc";
@@ -2038,12 +2078,15 @@
         ctx.stroke();
       }
 
+      if (logo) {
+        ctx.drawImage(logo, 76, 54, 158, 158);
+      }
       ctx.fillStyle = "#1d1c18";
-      ctx.font = "900 86px Pretendard, Arial, sans-serif";
-      ctx.fillText("Again 2002", 90, 155);
+      ctx.font = "900 72px Pretendard, Arial, sans-serif";
+      ctx.fillText("Again 2002", 248, 142);
       ctx.font = "800 33px Pretendard, Arial, sans-serif";
       ctx.fillStyle = "#496c58";
-      ctx.fillText("한국 축구, 팬들의 목소리", 94, 210);
+      ctx.fillText("한국 축구, 팬들의 목소리", 252, 194);
 
       drawRoundedRect(ctx, 82, 345, 916, 1045, 34, bg);
       ctx.strokeStyle = "rgba(29,28,24,.16)";
@@ -2101,9 +2144,12 @@
       ctx.fillText("이 카드는 Again 2002에서 공유되었습니다.", 92, 1600);
 
       drawRoundedRect(ctx, 90, 1690, 900, 94, 47, "#496c58");
+      if (logo) {
+        ctx.drawImage(logo, 315, 1708, 56, 56);
+      }
       ctx.fillStyle = "#fffaf0";
       ctx.font = "900 34px Pretendard, Arial, sans-serif";
-      ctx.fillText("again2002.com", 380, 1750);
+      ctx.fillText("again2002.com", logo ? 390 : 380, 1750);
     }
 
     function drawRoundedRect(ctx, x, y, width, height, radius, fill) {
