@@ -356,10 +356,18 @@
       gap: 10px;
     }
 
-    .style-row {
+    .style-row,
+    .category-row {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
       gap: 7px;
+    }
+
+    .style-row {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .category-row {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
     }
 
     .mode-row {
@@ -368,22 +376,26 @@
       gap: 7px;
     }
 
-    .style-row button {
+    .style-row button,
+    .category-row button {
       min-height: 38px;
       border: 1px solid rgba(25,28,35,.13);
       border-radius: var(--radius);
       background: rgba(255,255,255,.72);
       color: var(--muted);
       font-weight: 900;
+      padding: 0 5px;
     }
 
-    .style-row button.active {
+    .style-row button.active,
+    .category-row button.active {
       background: var(--ink);
       color: #fff;
       border-color: var(--ink);
     }
 
     :root[data-theme="dark"] .style-row button,
+    :root[data-theme="dark"] .category-row button,
     :root[data-theme="dark"] .mode-row button {
       border-color: rgba(243,239,229,.24);
       background: #262720;
@@ -392,6 +404,7 @@
     }
 
     :root[data-theme="dark"] .style-row button.active,
+    :root[data-theme="dark"] .category-row button.active,
     :root[data-theme="dark"] .mode-row button.active {
       border-color: #f3efe5;
       background: #f3efe5;
@@ -415,6 +428,7 @@
     }
 
     :root[data-theme="dark"] .style-row button.active,
+    :root[data-theme="dark"] .category-row button.active,
     :root[data-theme="dark"] .mode-row button.active {
       border-color: #f3efe5;
       background: #f3efe5;
@@ -987,6 +1001,16 @@
             <textarea id="message" maxlength="180" placeholder="오늘 경기에서 팬들이 답답했던 지점, 감독 운영, 선수 기용, 응원 문화까지 자유롭게 적어주세요."></textarea>
           </div>
           <div class="field">
+            <label>카테고리</label>
+            <div class="category-row" id="categoryRow">
+              <button type="button" class="active" data-category="sad">슬픔</button>
+              <button type="button" data-category="anger">분노</button>
+              <button type="button" data-category="hope">희망</button>
+              <button type="button" data-category="joy">기쁨</button>
+              <button type="button" data-category="fix">개선</button>
+            </div>
+          </div>
+          <div class="field">
             <label>카드 스타일</label>
             <div class="style-row" id="styleRow">
               <button type="button" class="active" data-style="paper">기본</button>
@@ -1088,8 +1112,19 @@
       comments50: 110,
       posts3: 45
     };
-    const slurWords = ["씨발", "시발", "개새끼", "병신", "좆", "지랄", "꺼져", "죽어", "새끼", "븅신"];
+    const slurWords = [
+      "씨발", "시발", "ㅅㅂ", "ㅆㅂ", "개새끼", "새끼", "병신", "븅신", "등신", "멍청이",
+      "좆", "존나", "졸라", "지랄", "꺼져", "닥쳐", "엿먹", "미친", "미쳤", "개같",
+      "개판", "빡치", "쓰레기", "한심", "노답"
+    ];
     const blockWords = ["살해", "죽이", "테러", "칼", "집주소", "전화번호", "가족", "주소", "번호"];
+    const categories = {
+      sad: "슬픔",
+      anger: "분노",
+      hope: "희망",
+      joy: "기쁨",
+      fix: "개선"
+    };
     const styleDefaults = {
       paper: { bg: "#f8f3e7", fg: "#1d1c18" },
       board: { bg: "#36584a", fg: "#f4efdf" },
@@ -1114,6 +1149,7 @@
 
     let posts = loadPosts();
     let selectedStyle = "paper";
+    let selectedCategory = "sad";
     let currentAccount = loadSessionAccount();
     let currentMode = currentAccount ? "member" : "guest";
     let activeAuthorId = null;
@@ -1146,6 +1182,13 @@
         selectedStyle = button.dataset.style;
         document.querySelectorAll("#styleRow button").forEach((item) => item.classList.toggle("active", item === button));
         applyStyleDefaults(selectedStyle);
+      });
+    });
+
+    document.querySelectorAll("#categoryRow button").forEach((button) => {
+      button.addEventListener("click", () => {
+        selectedCategory = normalizeCategory(button.dataset.category);
+        document.querySelectorAll("#categoryRow button").forEach((item) => item.classList.toggle("active", item === button));
       });
     });
 
@@ -1211,6 +1254,7 @@
         authorLevel: author.level || 0,
         authorVerified: author.verified === true,
         style: selectedStyle,
+        category: selectedCategory,
         bgColor: safeHex(bgColorInput.value, colors.bg),
         textColor: safeHex(textColorInput.value, colors.fg),
         text: censor(rawText),
@@ -1225,7 +1269,9 @@
       postForm.reset();
       hydrateComposerAccount();
       selectedStyle = "paper";
+      selectedCategory = "sad";
       document.querySelectorAll("#styleRow button").forEach((item) => item.classList.toggle("active", item.dataset.style === "paper"));
+      document.querySelectorAll("#categoryRow button").forEach((item) => item.classList.toggle("active", item.dataset.category === "sad"));
       applyStyleDefaults("paper");
       notice.textContent = `${author.name}으로 올라갔습니다.`;
       showToast("피드에 올라갔습니다.");
@@ -1243,6 +1289,7 @@
         authorLevel: number === 1 ? 2 : 1,
         authorVerified: true,
         style,
+        category: number === 1 ? "fix" : "anger",
         bgColor,
         textColor,
         text: escapeHtml(text),
@@ -1291,6 +1338,7 @@
         authorLevel: 0,
         authorVerified: false,
         style: post.theme === "chalk" ? "board" : "paper",
+        category: "anger",
         bgColor: remapLegacyColor(post.bgColor || "#f8f3e7"),
         textColor: remapLegacyColor(post.textColor || "#1d1c18"),
         text: post.text || "",
@@ -1316,6 +1364,7 @@
           authorLevel: Number.isFinite(post.authorLevel) ? post.authorLevel : (post.authorType === "member" ? 1 : 0),
           authorVerified: post.authorVerified === true || post.authorType === "member",
           style,
+          category: normalizeCategory(post.category),
           bgColor: safeHex(remapLegacyColor(post.bgColor), colors.bg),
           textColor: safeHex(remapLegacyColor(post.textColor), colors.fg),
           text: post.text || "",
@@ -1731,7 +1780,8 @@
     function censor(text) {
       let output = escapeHtml(text);
       slurWords.forEach((word) => {
-        output = output.replace(new RegExp(escapeRegExp(word), "gi"), `<span class="censored">${"삐".repeat(Math.min(3, word.length))}</span>`);
+        const compactPattern = [...word].map((char) => `${escapeRegExp(char)}+`).join("[\\s\\W_]*");
+        output = output.replace(new RegExp(compactPattern, "gi"), `<span class="censored">${"삐".repeat(Math.min(3, word.length))}</span>`);
       });
       return output;
     }
@@ -1829,7 +1879,7 @@
             </div>
             <p class="message">${post.text}</p>
             <div class="card-meta">
-              <span>${styleName(post.style)}</span>
+              <span>${categoryName(post.category)}</span>
               <span>댓글 ${comments.length}</span>
             </div>
           </div>
@@ -1973,7 +2023,7 @@
       ctx.fillStyle = fg;
       ctx.fillText(`공감 ${post.likes}`, 135, 1285);
       ctx.fillText(`댓글 ${(post.comments || []).length}`, 360, 1285);
-      ctx.fillText(styleName(post.style), 615, 1285);
+      ctx.fillText(categoryName(post.category), 615, 1285);
 
       ctx.fillStyle = "#1d1c18";
       ctx.font = "900 54px Pretendard, Arial, sans-serif";
@@ -2194,7 +2244,12 @@
     async function persistPost(post) {
       savePosts();
       if (!serviceClient) return;
-      await serviceClient.from("posts").upsert(toRemotePost(post));
+      const result = await serviceClient.from("posts").upsert(toRemotePost(post));
+      if (result.error && String(result.error.message || "").includes("category")) {
+        await serviceClient.from("posts").upsert(toRemotePost(post, false));
+        return;
+      }
+      if (result.error) throw result.error;
     }
 
     async function persistLike(post) {
@@ -2209,8 +2264,8 @@
       await serviceClient.from("comments").insert(toRemoteComment(postId, comment));
     }
 
-    function toRemotePost(post) {
-      return {
+    function toRemotePost(post, includeCategory = true) {
+      const payload = {
         id: post.id,
         author_id: post.authorId,
         author_base: post.authorBase,
@@ -2226,6 +2281,8 @@
         likes: post.likes,
         created_at: new Date(post.createdAt).toISOString()
       };
+      if (includeCategory) payload.category = normalizeCategory(post.category);
+      return payload;
     }
 
     function fromRemotePost(post) {
@@ -2239,6 +2296,7 @@
         authorLevel: post.author_level || 0,
         authorVerified: post.author_verified === true,
         style: post.style,
+        category: normalizeCategory(post.category),
         bgColor: post.bg_color,
         textColor: post.text_color,
         text: post.body_html,
@@ -2527,6 +2585,14 @@
 
     function styleName(style) {
       return { paper: "기본", board: "칠판", bold: "강조" }[style] || "기본";
+    }
+
+    function normalizeCategory(category) {
+      return categories[category] ? category : "sad";
+    }
+
+    function categoryName(category) {
+      return categories[normalizeCategory(category)];
     }
 
     function applyStyleDefaults(style) {

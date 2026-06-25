@@ -29,6 +29,7 @@ git push origin main
 ## Supabase
 
 Run `supabase-schema.sql` in the Supabase SQL Editor.
+Run it again after updates too; it safely adds new columns such as `posts.category`.
 
 `again.config.js` must contain:
 

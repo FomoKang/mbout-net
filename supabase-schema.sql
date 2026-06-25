@@ -8,6 +8,7 @@ create table if not exists public.posts (
   author_level integer not null default 0,
   author_verified boolean not null default false,
   style text not null default 'paper',
+  category text not null default 'sad',
   bg_color text not null default '#f8f3e7',
   text_color text not null default '#1d1c18',
   body_html text not null,
@@ -42,6 +43,9 @@ create table if not exists public.profiles (
 alter table public.posts enable row level security;
 alter table public.comments enable row level security;
 alter table public.profiles enable row level security;
+
+alter table public.posts
+  add column if not exists category text not null default 'sad';
 
 drop policy if exists "Public posts are readable" on public.posts;
 create policy "Public posts are readable"
