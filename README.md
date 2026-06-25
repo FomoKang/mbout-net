@@ -42,10 +42,11 @@ window.AGAIN2002_CONFIG = {
 The site uses:
 
 - Supabase Auth for email/password DB accounts.
-- `public.profiles` for username, display name, level, and EXP.
+- `public.profiles` for internal username, visible nickname, level, and EXP.
 - Supabase Presence for live connected browser count.
 - Supabase Postgres for shared posts, comments, and likes.
 - Supabase Realtime to refresh the feed across users.
+- Canvas-generated 9:16 card images for Instagram/TikTok-style sharing.
 
 ## Resend SMTP For Supabase Auth
 
