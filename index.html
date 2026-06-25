@@ -622,7 +622,7 @@
 
     .card-topline {
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-columns: minmax(0, 1fr) auto auto;
       align-items: center;
       gap: 8px;
       min-height: 34px;
@@ -633,7 +633,6 @@
       text-transform: uppercase;
     }
 
-    .card-number,
     .category-chip,
     .card-time {
       display: inline-flex;
@@ -643,14 +642,8 @@
       background: rgba(255,255,255,.35);
     }
 
-    .card-number {
-      padding: 0 9px;
-      border-radius: 999px;
-      font-variant-numeric: tabular-nums;
-    }
-
     .category-chip {
-      justify-self: start;
+      justify-self: end;
       max-width: 100%;
       padding: 0 12px;
       border-radius: 7px;
@@ -659,6 +652,11 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .card-topline .author-btn {
+      max-width: 100%;
+      justify-self: start;
     }
 
     .card-time {
@@ -812,7 +810,7 @@
     .card-signature {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: center;
       gap: 10px;
       padding-top: 2px;
       color: color-mix(in srgb, var(--card-fg, #1d1c18) 70%, transparent);
@@ -823,8 +821,10 @@
     .card-stats {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 6px;
       min-height: 27px;
+      min-width: 152px;
       padding: 0 8px;
       border: 1px solid rgba(29,28,24,.1);
       border-radius: 999px;
@@ -832,7 +832,6 @@
       white-space: nowrap;
     }
 
-    :root[data-theme="dark"] .card-number,
     :root[data-theme="dark"] .category-chip,
     :root[data-theme="dark"] .card-time,
     :root[data-theme="dark"] .card-stats {
@@ -1198,7 +1197,7 @@
       }
 
       .card-topline {
-        grid-template-columns: auto minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr) auto;
       }
 
       .card-time {
@@ -1207,8 +1206,7 @@
       }
 
       .card-signature {
-        align-items: flex-start;
-        flex-direction: column;
+        align-items: center;
       }
 
       .card-stats {
@@ -2287,7 +2285,7 @@
         <article class="card ${post.style}" data-id="${escapeAttr(post.id)}" style="--card-bg:${safeHex(post.bgColor, styleDefaults[post.style].bg)};--card-fg:${safeHex(post.textColor, styleDefaults[post.style].fg)}">
           <div class="card-main">
             <div class="card-topline">
-              <span class="card-number">AG-${cardSerial(post)}</span>
+              <button class="author-btn" type="button" data-author="${escapeAttr(post.authorId)}">${authorLabel(post)}</button>
               <span class="category-chip">${categoryName(post.category)}</span>
               <span class="card-time">${relativeTime(post.createdAt)}</span>
             </div>
@@ -2296,7 +2294,6 @@
             </div>
             ${mediaTemplate(post.media)}
             <div class="card-signature">
-              <button class="author-btn" type="button" data-author="${escapeAttr(post.authorId)}">${authorLabel(post)}</button>
               <span class="card-stats">공감 ${post.likes} · 댓글 ${comments.length}</span>
             </div>
           </div>
@@ -2316,12 +2313,6 @@
           </div>
         </article>
       `;
-    }
-
-    function cardSerial(post) {
-      const source = String(post.id || post.createdAt || post.text || "");
-      const value = Array.from(source).reduce((sum, char) => sum + char.charCodeAt(0), 0) % 1000;
-      return String(value || 1).padStart(3, "0");
     }
 
     function commentFormTemplate() {
