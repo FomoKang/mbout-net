@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MBOUT.NET</title>
-  <script src="./mbout.config.js"></script>
+  <title>Again 2002</title>
+  <script src="./again.config.js"></script>
   <style>
     :root {
       --bg: #eee8dc;
@@ -893,7 +893,7 @@
   <main class="app">
     <header class="topbar">
       <div class="brand">
-        <h1><a class="home-link" href="./index.html" aria-label="MBOUT.NET 홈">MBOUT.NET</a></h1>
+        <h1><a class="home-link" href="./index.html" aria-label="Again 2002 홈">Again 2002</a></h1>
         <p class="lead">
           <span>한국 축구, 팬들의 문제는 없는가?</span>
           <span>팬들의 목소리를 들어보겠습니다.</span>
@@ -1016,17 +1016,17 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script>
-    const storageKey = "mbout-feed-v2";
+    const storageKey = "again2002-feed-v1";
     const oldStorageKey = "coach-critique-feed-v1";
-    const identityKey = "mbout-identity-v2";
-    const registryKey = "mbout-author-registry-v2";
-    const accountKey = "mbout-account-v2";
-    const sessionKey = "mbout-session-v2";
-    const themeKey = "mbout-theme-v2";
-    const goalAwardKey = "mbout-goal-awards-v2";
+    const identityKey = "again2002-identity-v1";
+    const registryKey = "again2002-author-registry-v1";
+    const accountKey = "again2002-account-v1";
+    const sessionKey = "again2002-session-v1";
+    const themeKey = "again2002-theme-v1";
+    const goalAwardKey = "again2002-goal-awards-v1";
     const serviceConfig = {
-      supabaseUrl: String(globalThis.MBOUT_CONFIG?.supabaseUrl || "").trim(),
-      supabaseAnonKey: String(globalThis.MBOUT_CONFIG?.supabaseAnonKey || "").trim()
+      supabaseUrl: String(globalThis.AGAIN2002_CONFIG?.supabaseUrl || "").trim(),
+      supabaseAnonKey: String(globalThis.AGAIN2002_CONFIG?.supabaseAnonKey || "").trim()
     };
     const goalXp = {
       likes10: 60,
@@ -1392,6 +1392,13 @@
     }
 
     function saveAccount(account) {
+      if (account?.source === "remote" && serviceClient) {
+        serviceClient.from("profiles")
+          .update({ level: account.level || 1, xp: account.xp || 0, updated_at: new Date().toISOString() })
+          .eq("id", account.authId)
+          .then(() => {});
+        return;
+      }
       const accounts = loadAccounts();
       accounts[account.id] = account;
       localStorage.setItem(accountKey, JSON.stringify(accounts));
@@ -1409,13 +1416,18 @@
 
     function saveSessionAccount(account) {
       currentAccount = account;
-      localStorage.setItem(sessionKey, JSON.stringify({ id: account.id }));
+      if (account.source !== "remote") {
+        localStorage.setItem(sessionKey, JSON.stringify({ id: account.id }));
+      }
       hydrateComposerAccount();
       setMode("member");
       showToast(`${account.nick}으로 로그인했습니다.`);
     }
 
-    function clearSessionAccount() {
+    async function clearSessionAccount() {
+      if (currentAccount?.source === "remote" && serviceClient) {
+        await serviceClient.auth.signOut();
+      }
       currentAccount = null;
       localStorage.removeItem(sessionKey);
       setMode("guest");
@@ -1427,10 +1439,43 @@
       return simpleHash(`${base}:${password}`);
     }
 
-    function createMemberAccount(nick, password) {
+    async function createMemberAccount(nick, password, options = {}) {
       const base = normalizeNick(nick);
       if (!base || base === "익명팬") return { ok: false, message: "닉네임을 입력해주세요." };
       if (password.length < 4) return { ok: false, message: "비밀번호는 4자 이상으로 해주세요." };
+
+      if (serviceClient) {
+        const email = String(options.email || "").trim();
+        const displayName = normalizeDisplayName(options.displayName || base);
+        if (!/^[a-zA-Z0-9_]{3,16}$/.test(base)) return { ok: false, message: "아이디는 영문/숫자/_ 3~16자로 해주세요." };
+        if (!displayName) return { ok: false, message: "이름을 입력해주세요." };
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, message: "이메일을 정확히 입력해주세요." };
+
+        const duplicate = await serviceClient
+          .from("profiles")
+          .select("id")
+          .eq("username", base)
+          .maybeSingle();
+        if (duplicate.data) return { ok: false, message: "이미 사용 중인 아이디입니다." };
+
+        const { data, error } = await serviceClient.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              username: base,
+              display_name: displayName
+            }
+          }
+        });
+
+        if (error) return { ok: false, message: error.message };
+        if (!data.session) return { ok: true, pendingEmail: true, message: "인증 메일을 보냈습니다. 메일 확인 후 로그인해주세요." };
+
+        const account = await accountFromUser(data.user);
+        return { ok: true, account };
+      }
+
       const passwordHash = accountHash(base, password);
       const existing = loadAccount(base, passwordHash);
       if (existing) return { ok: false, message: "이미 있는 계정입니다. 로그인 버튼을 눌러주세요." };
@@ -1438,13 +1483,69 @@
       return { ok: true, account };
     }
 
-    function loginMemberAccount(nick, password) {
+    async function loginMemberAccount(nick, password, options = {}) {
       const base = normalizeNick(nick);
-      if (!base || base === "익명팬") return { ok: false, message: "닉네임을 입력해주세요." };
       if (!password) return { ok: false, message: "비밀번호를 입력해주세요." };
+
+      if (serviceClient) {
+        const email = String(options.email || "").trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, message: "로그인은 이메일과 비밀번호로 해주세요." };
+        const { data, error } = await serviceClient.auth.signInWithPassword({ email, password });
+        if (error) return { ok: false, message: error.message };
+        const account = await accountFromUser(data.user);
+        return { ok: true, account };
+      }
+
+      if (!base || base === "익명팬") return { ok: false, message: "닉네임을 입력해주세요." };
       const account = loadAccount(base, accountHash(base, password));
       if (!account) return { ok: false, message: "계정이 없거나 비밀번호가 다릅니다." };
       return { ok: true, account };
+    }
+
+    function normalizeDisplayName(raw) {
+      return escapeHtml(String(raw || "").trim().replace(/\s+/g, " ").slice(0, 16));
+    }
+
+    async function accountFromUser(user) {
+      if (!user || !serviceClient) return null;
+      const metadata = user.user_metadata || {};
+      let profile = null;
+      const result = await serviceClient
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      profile = result.data;
+      if (!profile) {
+        const fallbackUserName = normalizeNick(metadata.username || user.email?.split("@")[0] || "fan");
+        const fallbackDisplay = normalizeDisplayName(metadata.display_name || fallbackUserName);
+        const upsert = await serviceClient
+          .from("profiles")
+          .upsert({
+            id: user.id,
+            username: fallbackUserName,
+            display_name: fallbackDisplay,
+            level: 1,
+            xp: 0,
+            updated_at: new Date().toISOString()
+          })
+          .select("*")
+          .maybeSingle();
+        profile = upsert.data;
+      }
+
+      return {
+        id: `auth-${user.id}`,
+        authId: user.id,
+        source: "remote",
+        nick: profile?.username || normalizeNick(metadata.username || user.email?.split("@")[0] || "fan"),
+        displayName: profile?.display_name || normalizeDisplayName(metadata.display_name || ""),
+        email: user.email || "",
+        level: profile?.level || 1,
+        xp: profile?.xp || 0,
+        createdAt: user.created_at ? Date.parse(user.created_at) : Date.now()
+      };
     }
 
     function hydrateComposerAccount() {
@@ -1662,6 +1763,7 @@
       try {
         const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm");
         serviceClient = createClient(serviceConfig.supabaseUrl, serviceConfig.supabaseAnonKey);
+        await initAuth();
         initPresence(serviceClient);
         await loadRemoteFeed();
         subscribeRemoteFeed();
@@ -1672,8 +1774,33 @@
       }
     }
 
+    async function initAuth() {
+      if (!serviceClient) return;
+      const { data } = await serviceClient.auth.getSession();
+      if (data.session?.user) {
+        currentAccount = await accountFromUser(data.session.user);
+        hydrateComposerAccount();
+        setMode("member");
+      }
+
+      serviceClient.auth.onAuthStateChange(async (_event, session) => {
+        if (session?.user) {
+          currentAccount = await accountFromUser(session.user);
+          hydrateComposerAccount();
+          setMode("member");
+          render();
+          return;
+        }
+        if (currentAccount?.source === "remote") {
+          currentAccount = null;
+          setMode("guest");
+          render();
+        }
+      });
+    }
+
     function initPresence(supabase) {
-      const channel = supabase.channel("mbout-online", {
+      const channel = supabase.channel("again2002-online", {
         config: { presence: { key: getClientId() } }
       });
 
@@ -1734,7 +1861,7 @@
 
     function subscribeRemoteFeed() {
       if (!serviceClient) return;
-      serviceClient.channel("mbout-feed")
+      serviceClient.channel("again2002-feed")
         .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, scheduleRemoteRefresh)
         .on("postgres_changes", { event: "*", schema: "public", table: "comments" }, scheduleRemoteRefresh)
         .subscribe();
@@ -1865,7 +1992,7 @@
 
     function awardGoalXp(goalData) {
       if (currentMode !== "member" || !currentAccount) return;
-      const account = loadAccounts()[currentAccount.id];
+      const account = currentAccount.source === "remote" ? currentAccount : loadAccounts()[currentAccount.id];
       if (!account) return;
 
       const todayKey = new Date().toISOString().slice(0, 10);
@@ -1900,19 +2027,19 @@
       document.querySelector("#accountMode").textContent = currentMode === "member" ? "로그인" : "비로그인";
 
       if (currentAccount) {
-        const account = loadAccounts()[currentAccount.id] || currentAccount;
+        const account = currentAccount.source === "remote" ? currentAccount : (loadAccounts()[currentAccount.id] || currentAccount);
         currentAccount = account;
         const needed = xpForNext(account.level);
         const percent = Math.min(100, Math.round((account.xp / needed) * 100));
         accountBox.innerHTML = `
           <div class="account-item">
             <strong><span class="${levelClass(account.level)}">${account.nick}</span> Lv.${account.level}</strong>
-            <span>EXP ${account.xp}/${needed} · ${levelTitle(account.level)}</span>
+            <span>${account.source === "remote" ? `${account.displayName || "이름 미입력"} · ${account.email}` : "로컬 계정"} · EXP ${account.xp}/${needed} · ${levelTitle(account.level)}</span>
             <div class="xp-bar"><span style="width:${percent}%"></span></div>
           </div>
           <div class="account-form">
             <button class="logout-btn" id="logoutAccount" type="button">로그아웃</button>
-            <div class="account-note">회원 글과 댓글에는 IP 대신 레벨이 표시됩니다. 목표 달성 EXP도 이 계정에 쌓입니다.</div>
+            <div class="account-note">${account.source === "remote" ? "DB 계정입니다. 회원 글과 댓글에는 IP 대신 레벨이 표시됩니다." : "로컬 계정입니다. Supabase 연결 전 임시 계정으로만 유지됩니다."}</div>
           </div>
         `;
         document.querySelector("#logoutAccount").addEventListener("click", clearSessionAccount);
@@ -1926,9 +2053,8 @@
             <span>비로그인 글은 글쓰기 칸의 닉네임과 비밀번호로 작성됩니다. 카드에는 IP 번호가 붙고, 레벨 EXP는 쌓이지 않습니다.</span>
           </div>
           <div class="account-form">
-            <div class="account-note">레벨을 올리고 싶으면 아래에서 같은 닉네임과 비밀번호로 계정을 만들면 됩니다.</div>
-            <input id="accountNick" maxlength="12" placeholder="닉네임" autocomplete="username" value="${escapeAttr(nick)}" />
-            <input id="accountPassword" type="password" maxlength="24" placeholder="비밀번호 4자 이상" autocomplete="new-password" />
+            <div class="account-note">${serviceClient ? "DB 계정을 만들면 다른 기기에서도 로그인할 수 있습니다." : "레벨을 올리고 싶으면 아래에서 같은 닉네임과 비밀번호로 계정을 만들면 됩니다."}</div>
+            ${accountFormFields(nick)}
             <div class="account-actions">
               <button id="createAccount" type="button">가입</button>
               <button id="loginAccount" class="secondary" type="button">로그인</button>
@@ -1942,23 +2068,40 @@
       accountBox.innerHTML = `
         <div class="account-item">
           <strong>가입 또는 로그인</strong>
-          <span>회원으로 글을 쓰면 IP 대신 레벨이 붙고, 오늘의 목표 EXP가 누적됩니다.</span>
+          <span>${serviceClient ? "DB 계정으로 글을 쓰면 IP 대신 레벨이 붙고, 오늘의 목표 EXP가 누적됩니다." : "회원으로 글을 쓰면 IP 대신 레벨이 붙고, 오늘의 목표 EXP가 누적됩니다."}</span>
         </div>
         <div class="account-form">
-          <input id="accountNick" maxlength="12" placeholder="닉네임" autocomplete="username" value="${escapeAttr(nick)}" />
-          <input id="accountPassword" type="password" maxlength="24" placeholder="비밀번호 4자 이상" autocomplete="current-password" />
+          ${accountFormFields(nick)}
           <div class="account-actions">
             <button id="createAccount" type="button">가입</button>
             <button id="loginAccount" class="secondary" type="button">로그인</button>
           </div>
-          <div class="account-note">실명 인증 없는 로컬 계정입니다. 같은 브라우저에서만 로그인 상태가 유지됩니다.</div>
+          <div class="account-note">${serviceClient ? "인증 메일을 켜두면 가입 후 이메일 확인이 필요합니다. 실명 인증은 아직 하지 않습니다." : "실명 인증 없는 로컬 계정입니다. 같은 브라우저에서만 로그인 상태가 유지됩니다."}</div>
         </div>
       `;
       bindAccountForm();
     }
 
+    function accountFormFields(nick) {
+      if (!serviceClient) {
+        return `
+          <input id="accountNick" maxlength="12" placeholder="닉네임" autocomplete="username" value="${escapeAttr(nick)}" />
+          <input id="accountPassword" type="password" maxlength="24" placeholder="비밀번호 4자 이상" autocomplete="current-password" />
+        `;
+      }
+
+      return `
+        <input id="accountNick" maxlength="16" placeholder="아이디 영문/숫자/_" autocomplete="username" value="${escapeAttr(nick)}" />
+        <input id="accountName" maxlength="16" placeholder="이름" autocomplete="name" />
+        <input id="accountEmail" type="email" maxlength="80" placeholder="이메일" autocomplete="email" />
+        <input id="accountPassword" type="password" maxlength="48" placeholder="비밀번호 6자 이상" autocomplete="current-password" />
+      `;
+    }
+
     function bindAccountForm() {
       const accountNick = document.querySelector("#accountNick");
+      const accountName = document.querySelector("#accountName");
+      const accountEmail = document.querySelector("#accountEmail");
       const accountPassword = document.querySelector("#accountPassword");
       if (!accountNick || !accountPassword) return;
 
@@ -1966,17 +2109,26 @@
         nicknameInput.value = accountNick.value;
       });
 
-      document.querySelector("#createAccount").addEventListener("click", () => {
-        const result = createMemberAccount(accountNick.value, accountPassword.value.trim());
+      document.querySelector("#createAccount").addEventListener("click", async () => {
+        const result = await createMemberAccount(accountNick.value, accountPassword.value.trim(), {
+          displayName: accountName?.value,
+          email: accountEmail?.value
+        });
         if (!result.ok) {
+          showToast(result.message);
+          return;
+        }
+        if (result.pendingEmail) {
           showToast(result.message);
           return;
         }
         saveSessionAccount(result.account);
       });
 
-      document.querySelector("#loginAccount").addEventListener("click", () => {
-        const result = loginMemberAccount(accountNick.value, accountPassword.value.trim());
+      document.querySelector("#loginAccount").addEventListener("click", async () => {
+        const result = await loginMemberAccount(accountNick.value, accountPassword.value.trim(), {
+          email: accountEmail?.value
+        });
         if (!result.ok) {
           showToast(result.message);
           return;

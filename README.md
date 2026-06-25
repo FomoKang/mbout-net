@@ -1,44 +1,88 @@
-# MBOUT.NET
+# Again 2002
 
 Static MVP for a Korean football fan voice feed.
 
-## Fastest Deploy
+Production domain:
 
-1. Install or use Vercel CLI.
-2. Run from this folder:
-
-```powershell
-npx vercel --prod
+```txt
+https://again2002.com
+https://www.again2002.com
 ```
 
-The site works as a static MVP immediately. Without Supabase it stores posts in each browser only and shows the current browser as 1 connected user.
+Legacy domain:
 
-## Real Online Count And Shared Feed
+```txt
+https://mbout.net
+https://www.mbout.net
+```
 
-For real `현재 n명 접속 중` plus shared posts/comments:
+## Deploy
 
-1. Create a Supabase project.
-2. Open Supabase SQL Editor.
-3. Run `supabase-schema.sql`.
-4. Edit `mbout.config.js`:
+GitHub is connected to Vercel. Push `main` to deploy:
+
+```powershell
+git add .
+git commit -m "Update Again 2002"
+git push origin main
+```
+
+## Supabase
+
+Run `supabase-schema.sql` in the Supabase SQL Editor.
+
+`again.config.js` must contain:
 
 ```js
-window.MBOUT_CONFIG = {
+window.AGAIN2002_CONFIG = {
   supabaseUrl: "https://YOUR_PROJECT.supabase.co",
   supabaseAnonKey: "YOUR_SUPABASE_ANON_KEY"
 };
 ```
 
-After redeploy, MBOUT.NET uses:
+The site uses:
 
+- Supabase Auth for email/password DB accounts.
+- `public.profiles` for username, display name, level, and EXP.
 - Supabase Presence for live connected browser count.
 - Supabase Postgres for shared posts, comments, and likes.
 - Supabase Realtime to refresh the feed across users.
 
-## Next Production Step
+## Resend SMTP For Supabase Auth
 
-The fastest real-service path is:
+Supabase default auth email is not production-ready. Configure Resend as custom SMTP in Supabase:
 
-1. Deploy this static MVP on Vercel.
-2. Add Supabase keys to `mbout.config.js`.
-3. Replace open public write policies with proper moderation/rate limits before large traffic.
+```txt
+Host: smtp.resend.com
+Port: 587
+Username: resend
+Password: YOUR_RESEND_API_KEY
+Sender email: no-reply@auth.again2002.com
+Sender name: Again 2002
+```
+
+Recommended sending domain:
+
+```txt
+auth.again2002.com
+```
+
+After Resend gives DNS records, add them at the domain registrar, then verify the domain in Resend.
+
+In Supabase:
+
+```txt
+Authentication -> Settings -> SMTP Settings
+Enable Custom SMTP
+Enable email confirmations when Resend is verified
+Site URL: https://again2002.com
+Redirect URLs:
+https://again2002.com
+https://www.again2002.com
+```
+
+## Before Large Traffic
+
+- Add CAPTCHA or rate limits to signup.
+- Keep auth emails short and non-promotional.
+- Move moderation/rate limits server-side.
+- Keep `mbout.net` as a redirect or legacy alias.
