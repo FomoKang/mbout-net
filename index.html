@@ -650,6 +650,35 @@
       border-right: 0;
     }
 
+    .report-btn {
+      position: absolute;
+      right: 10px;
+      bottom: 54px;
+      z-index: 2;
+      display: inline-grid;
+      place-items: center;
+      width: 26px;
+      height: 26px;
+      border: 1px solid rgba(25,28,35,.12);
+      border-radius: 999px;
+      background: rgba(255,255,255,.62);
+      color: color-mix(in srgb, var(--card-fg, #1d1c18) 74%, #496c58);
+      opacity: .74;
+      transition: opacity .16s ease, transform .16s ease, background .16s ease;
+    }
+
+    .report-btn:hover {
+      opacity: 1;
+      transform: translateY(-1px);
+      background: rgba(255,255,255,.86);
+    }
+
+    .report-btn svg {
+      width: 13px;
+      height: 13px;
+      fill: currentColor;
+    }
+
     .comments {
       display: none;
       border-top: 1px solid rgba(25,28,35,.1);
@@ -1103,6 +1132,7 @@
     const sessionKey = "again2002-session-v1";
     const themeKey = "again2002-theme-v1";
     const goalAwardKey = "again2002-goal-awards-v1";
+    const reportKey = "again2002-reports-v1";
     const serviceConfig = {
       supabaseUrl: String(globalThis.AGAIN2002_CONFIG?.supabaseUrl || "").trim(),
       supabaseAnonKey: String(globalThis.AGAIN2002_CONFIG?.supabaseAnonKey || "").trim()
@@ -1811,6 +1841,13 @@
           await sharePostImage(post);
         });
       });
+      document.querySelectorAll(".report-btn").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const post = posts.find((item) => item.id === button.closest(".card").dataset.id);
+          if (!post) return;
+          await reportPost(post);
+        });
+      });
       document.querySelectorAll(".comment-form").forEach((form) => {
         form.addEventListener("submit", async (event) => {
           event.preventDefault();
@@ -1888,6 +1925,9 @@
             <button class="react comment-toggle" type="button">댓글 ${comments.length}</button>
             <button class="react share-btn" type="button">공유</button>
           </div>
+          <button class="report-btn" type="button" title="운영진에게 신고" aria-label="운영진에게 신고">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5A1.5 1.5 0 0 1 6.5 2h10.2c1.3 0 2 1.5 1.2 2.5L15.5 7l2.4 2.5c.8 1 .1 2.5-1.2 2.5H7v8.5a1.5 1.5 0 0 1-3 0v-17Z"/></svg>
+          </button>
           <div class="comments">
             <div class="comment-list">
               ${comments.length ? comments.map(commentTemplate).join("") : `<div class="comment"><span>아직 댓글이 없습니다.</span></div>`}
@@ -1936,6 +1976,34 @@
       } catch (error) {
         if (error?.name !== "AbortError") showToast("공유 이미지를 만들 수 없습니다.");
       }
+    }
+
+    async function reportPost(post) {
+      const reports = loadReports();
+      if (reports[post.id]) {
+        showToast("이미 신고한 카드입니다.");
+        return;
+      }
+
+      const report = {
+        id: makeId(),
+        postId: post.id,
+        reporterId: getClientId(),
+        reason: "card-report",
+        createdAt: Date.now()
+      };
+      reports[post.id] = report.id;
+      localStorage.setItem(reportKey, JSON.stringify(reports));
+      await persistReport(report).catch(() => {});
+      showToast("운영진에게 신고가 접수됐습니다.");
+    }
+
+    function loadReports() {
+      try {
+        const reports = JSON.parse(localStorage.getItem(reportKey) || "null");
+        if (reports && typeof reports === "object") return reports;
+      } catch {}
+      return {};
     }
 
     function createShareImageBlob(post) {
@@ -2262,6 +2330,17 @@
       savePosts();
       if (!serviceClient) return;
       await serviceClient.from("comments").insert(toRemoteComment(postId, comment));
+    }
+
+    async function persistReport(report) {
+      if (!serviceClient) return;
+      await serviceClient.from("reports").insert({
+        id: report.id,
+        post_id: report.postId,
+        reporter_id: report.reporterId,
+        reason: report.reason,
+        created_at: new Date(report.createdAt).toISOString()
+      }).then(() => {});
     }
 
     function toRemotePost(post, includeCategory = true) {

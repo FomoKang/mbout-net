@@ -48,6 +48,7 @@ The site uses:
 - Supabase Postgres for shared posts, comments, and likes.
 - Supabase Realtime to refresh the feed across users.
 - Canvas-generated 9:16 card images for Instagram/TikTok-style sharing.
+- `public.reports` for small in-card moderation reports.
 
 ## Resend SMTP For Supabase Auth
 

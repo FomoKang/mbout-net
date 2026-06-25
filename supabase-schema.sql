@@ -30,6 +30,14 @@ create table if not exists public.comments (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.reports (
+  id text primary key,
+  post_id text not null references public.posts(id) on delete cascade,
+  reporter_id text not null,
+  reason text not null default 'card-report',
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   username text not null unique,
@@ -42,6 +50,7 @@ create table if not exists public.profiles (
 
 alter table public.posts enable row level security;
 alter table public.comments enable row level security;
+alter table public.reports enable row level security;
 alter table public.profiles enable row level security;
 
 alter table public.posts
@@ -71,6 +80,11 @@ create policy "Public comments are readable"
 drop policy if exists "Anyone can create comments" on public.comments;
 create policy "Anyone can create comments"
   on public.comments for insert
+  with check (true);
+
+drop policy if exists "Anyone can create reports" on public.reports;
+create policy "Anyone can create reports"
+  on public.reports for insert
   with check (true);
 
 drop policy if exists "Profiles are readable" on public.profiles;
