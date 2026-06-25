@@ -406,6 +406,10 @@
 
     .style-row button,
     .category-row button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
       min-height: 38px;
       border: 1px solid rgba(25,28,35,.13);
       border-radius: var(--radius);
@@ -413,6 +417,16 @@
       color: var(--muted);
       font-weight: 900;
       padding: 0 5px;
+    }
+
+    .category-emoji {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      font-size: .9rem;
+      line-height: 1;
     }
 
     .style-row button.active,
@@ -652,6 +666,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      gap: 6px;
     }
 
     .card-topline .author-btn {
@@ -1294,11 +1309,11 @@
           <div class="field">
             <label>카테고리</label>
             <div class="category-row" id="categoryRow">
-              <button type="button" class="active" data-category="sad">슬픔</button>
-              <button type="button" data-category="anger">분노</button>
-              <button type="button" data-category="hope">희망</button>
-              <button type="button" data-category="joy">기쁨</button>
-              <button type="button" data-category="fix">개선</button>
+              <button type="button" class="active" data-category="sad"><span class="category-emoji">😢</span><span>슬픔</span></button>
+              <button type="button" data-category="anger"><span class="category-emoji">🔥</span><span>분노</span></button>
+              <button type="button" data-category="hope"><span class="category-emoji">✨</span><span>희망</span></button>
+              <button type="button" data-category="joy"><span class="category-emoji">🙌</span><span>기쁨</span></button>
+              <button type="button" data-category="fix"><span class="category-emoji">🛠️</span><span>개선</span></button>
             </div>
           </div>
           <div class="field">
@@ -1418,6 +1433,13 @@
       hope: "희망",
       joy: "기쁨",
       fix: "개선"
+    };
+    const categoryIcons = {
+      sad: "😢",
+      anger: "🔥",
+      hope: "✨",
+      joy: "🙌",
+      fix: "🛠️"
     };
     const styleDefaults = {
       paper: { bg: "#f8f3e7", fg: "#1d1c18" },
@@ -2286,7 +2308,7 @@
           <div class="card-main">
             <div class="card-topline">
               <button class="author-btn" type="button" data-author="${escapeAttr(post.authorId)}">${authorLabel(post)}</button>
-              <span class="category-chip">${categoryName(post.category)}</span>
+              <span class="category-chip">${categoryHtml(post.category)}</span>
               <span class="card-time">${relativeTime(post.createdAt)}</span>
             </div>
             <div class="message-shell">
@@ -2507,16 +2529,23 @@
       ctx.fillText(stripTags(post.authorName || "익명팬"), 135, 430);
 
       const category = categoryName(post.category);
+      const categoryEmoji = categoryIcon(post.category);
       ctx.font = "900 24px Pretendard, Arial, sans-serif";
-      const pillWidth = Math.max(104, ctx.measureText(category).width + 42);
+      const labelWidth = ctx.measureText(category).width;
+      const pillWidth = Math.max(132, labelWidth + 82);
       const pillX = 945 - pillWidth;
       drawRoundedRect(ctx, pillX, 394, pillWidth, 44, 12, "rgba(29,28,24,.08)");
       ctx.strokeStyle = "rgba(29,28,24,.1)";
       ctx.lineWidth = 2;
       drawRoundedStroke(ctx, pillX, 394, pillWidth, 44, 12);
-      ctx.fillStyle = fg;
+      drawRoundedRect(ctx, pillX + 9, 401, 30, 30, 9, "rgba(255,250,240,.62)");
+      ctx.font = "900 20px 'Segoe UI Emoji', 'Apple Color Emoji', Pretendard, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(category, pillX + pillWidth / 2, 424);
+      ctx.fillStyle = fg;
+      ctx.fillText(categoryEmoji, pillX + 24, 423);
+      ctx.font = "900 24px Pretendard, Arial, sans-serif";
+      ctx.fillStyle = fg;
+      ctx.fillText(category, pillX + 39 + (pillWidth - 48) / 2, 424);
       ctx.textAlign = "left";
 
       ctx.font = "800 25px Pretendard, Arial, sans-serif";
@@ -3390,6 +3419,14 @@
 
     function categoryName(category) {
       return categories[normalizeCategory(category)];
+    }
+
+    function categoryIcon(category) {
+      return categoryIcons[normalizeCategory(category)] || categoryIcons.sad;
+    }
+
+    function categoryHtml(category) {
+      return `<span class="category-emoji">${categoryIcon(category)}</span><span>${categoryName(category)}</span>`;
     }
 
     function applyStyleDefaults(style) {
