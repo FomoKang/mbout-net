@@ -1,4 +1,4 @@
 window.MBOUT_CONFIG = {
-  supabaseUrl: "",
-  supabaseAnonKey: ""
+  supabaseUrl: "https://jwmmrmscmoblfeuqigyj.supabase.co",
+  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3bW1ybXNjbW9ibGZldXFpZ3lqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNTI1MDMsImV4cCI6MjA5NzkyODUwM30.fY3cOOZlUWgPHtTfk_X0BWhSBRQT4gzhSpy1OkW5eGE"
 };
