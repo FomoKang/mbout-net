@@ -2336,7 +2336,9 @@
       ctx.lineWidth = 2;
       drawRoundedStroke(ctx, pillX, 394, pillWidth, 44, 12);
       ctx.fillStyle = fg;
-      ctx.fillText(category, pillX + 21, 424);
+      ctx.textAlign = "center";
+      ctx.fillText(category, pillX + pillWidth / 2, 424);
+      ctx.textAlign = "left";
 
       ctx.font = "800 25px Pretendard, Arial, sans-serif";
       ctx.fillStyle = mixColor(fg, "#777777", .38);
@@ -2382,11 +2384,12 @@
       ctx.fillStyle = "#1d1c18";
       ctx.font = "900 56px Pretendard, Arial, sans-serif";
       ctx.fillText("팬들의 문제는 없는가?", 90, 1600);
-      ctx.font = "800 28px Pretendard, Arial, sans-serif";
-      ctx.fillStyle = "#496c58";
-      ctx.fillText("Again2002는 한국 축구의 재 부흥과 쇄신을 응원합니다.", 92, 1650);
+      ctx.font = "800 27px Pretendard, Arial, sans-serif";
       ctx.fillStyle = "#716c61";
-      ctx.fillText("이 카드는 Again2002에서 공유되었습니다.", 92, 1690);
+      ctx.fillText("Again2002는 한국 축구의 재 부흥과 쇄신을 응원합니다.", 92, 1662);
+      ctx.font = "800 25px Pretendard, Arial, sans-serif";
+      ctx.fillStyle = "#8a8377";
+      ctx.fillText("이 카드는 Again2002에서 공유되었습니다.", 92, 1704);
 
       drawRoundedRect(ctx, 740, 1490, 240, 240, 30, "#fffaf0");
       drawBrandedQrCode(ctx, "https://again2002.com", 770, 1520, 180, logo);
