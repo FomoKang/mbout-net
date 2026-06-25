@@ -2328,11 +2328,15 @@
       ctx.fillText(stripTags(post.authorName || "익명팬"), 135, 430);
 
       const category = categoryName(post.category);
-      ctx.font = "900 26px Pretendard, Arial, sans-serif";
-      const pillWidth = Math.max(116, ctx.measureText(category).width + 48);
-      drawRoundedRect(ctx, 945 - pillWidth, 392, pillWidth, 50, 25, "rgba(73,108,88,.14)");
+      ctx.font = "900 24px Pretendard, Arial, sans-serif";
+      const pillWidth = Math.max(104, ctx.measureText(category).width + 42);
+      const pillX = 945 - pillWidth;
+      drawRoundedRect(ctx, pillX, 394, pillWidth, 44, 12, "rgba(29,28,24,.08)");
+      ctx.strokeStyle = "rgba(29,28,24,.1)";
+      ctx.lineWidth = 2;
+      drawRoundedStroke(ctx, pillX, 394, pillWidth, 44, 12);
       ctx.fillStyle = fg;
-      ctx.fillText(category, 945 - pillWidth + 24, 425);
+      ctx.fillText(category, pillX + 21, 424);
 
       ctx.font = "800 25px Pretendard, Arial, sans-serif";
       ctx.fillStyle = mixColor(fg, "#777777", .38);
@@ -2376,28 +2380,11 @@
       ctx.fillText(`댓글 ${(post.comments || []).length}`, 360, 1285);
 
       ctx.fillStyle = "#1d1c18";
-      ctx.font = "900 54px Pretendard, Arial, sans-serif";
-      ctx.fillText("팬들의 문제는 없는가?", 90, 1545);
-      ctx.font = "800 31px Pretendard, Arial, sans-serif";
-      ctx.fillStyle = "#716c61";
-      ctx.fillText("이 카드는 Again 2002에서 공유되었습니다.", 92, 1600);
+      ctx.font = "900 56px Pretendard, Arial, sans-serif";
+      ctx.fillText("팬들의 문제는 없는가?", 90, 1600);
 
-      drawRoundedRect(ctx, 90, 1682, 612, 116, 30, "rgba(255,255,255,.54)");
-      if (logo) {
-        ctx.drawImage(logo, 118, 1702, 76, 76);
-      }
-      ctx.fillStyle = "#1d1c18";
-      ctx.font = "900 36px Pretendard, Arial, sans-serif";
-      ctx.fillText("Again 2002", logo ? 214 : 122, 1732);
-      ctx.font = "800 28px Pretendard, Arial, sans-serif";
-      ctx.fillStyle = "#496c58";
-      ctx.fillText("again2002.com", logo ? 216 : 122, 1770);
-
-      drawRoundedRect(ctx, 744, 1668, 236, 236, 28, "#fffaf0");
-      drawQrCode(ctx, "https://again2002.com", 774, 1698, 176);
-      ctx.fillStyle = "#716c61";
-      ctx.font = "800 22px Pretendard, Arial, sans-serif";
-      ctx.fillText("스캔해서 보기", 786, 1880);
+      drawRoundedRect(ctx, 740, 1490, 240, 240, 30, "#fffaf0");
+      drawBrandedQrCode(ctx, "https://again2002.com", 770, 1520, 180, logo);
     }
 
     function drawRoundedRect(ctx, x, y, width, height, radius, fill) {
@@ -2427,6 +2414,16 @@
       drawRoundedStroke(ctx, x, y, width, height, radius);
     }
 
+    function drawBrandedQrCode(ctx, text, x, y, size, logo) {
+      drawQrCode(ctx, text, x, y, size);
+      if (!logo) return;
+      const badge = Math.round(size * .28);
+      const badgeX = x + Math.round((size - badge) / 2);
+      const badgeY = y + Math.round((size - badge) / 2);
+      drawRoundedRect(ctx, badgeX - 7, badgeY - 7, badge + 14, badge + 14, 13, "#fffaf0");
+      drawLogoSymbol(ctx, logo, badgeX, badgeY, badge, badge);
+    }
+
     function drawQrCode(ctx, text, x, y, size) {
       const matrix = makeQrMatrix(text);
       const count = matrix.length;
@@ -2440,6 +2437,19 @@
           if (value) ctx.fillRect(x + offset + colIndex * cell, y + offset + rowIndex * cell, cell, cell);
         });
       });
+    }
+
+    function drawLogoSymbol(ctx, image, x, y, width, height) {
+      const sourceX = image.width * .1;
+      const sourceY = image.height * .2;
+      const sourceWidth = image.width * .8;
+      const sourceHeight = image.height * .4;
+      const scale = Math.min(width / sourceWidth, height / sourceHeight);
+      const drawWidth = sourceWidth * scale;
+      const drawHeight = sourceHeight * scale;
+      const dx = x + (width - drawWidth) / 2;
+      const dy = y + (height - drawHeight) / 2;
+      ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, dx, dy, drawWidth, drawHeight);
     }
 
     function makeQrMatrix(text) {
