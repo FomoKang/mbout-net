@@ -1331,6 +1331,180 @@
       transform: translateX(-50%) translateY(0);
     }
 
+    .intro-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 22% 18%, rgba(36,92,156,.2), transparent 28%),
+        radial-gradient(circle at 82% 28%, rgba(213,59,53,.16), transparent 30%),
+        rgba(243,240,233,.82);
+      backdrop-filter: blur(12px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .28s ease;
+    }
+
+    .intro-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .intro-card {
+      width: min(620px, 100%);
+      overflow: hidden;
+      border: 1px solid rgba(36,92,156,.18);
+      border-radius: 10px;
+      background:
+        linear-gradient(135deg, rgba(255,252,246,.96), rgba(247,241,231,.92)),
+        var(--panel);
+      box-shadow: 0 28px 80px rgba(49,44,35,.22);
+      transform: translateY(14px) scale(.98);
+      transition: transform .34s cubic-bezier(.2,.8,.2,1);
+    }
+
+    .intro-overlay.show .intro-card {
+      transform: translateY(0) scale(1);
+    }
+
+    .intro-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 17px 18px 12px;
+      border-bottom: 1px solid rgba(25,28,35,.1);
+    }
+
+    .intro-mark {
+      color: var(--blue);
+      font-size: .78rem;
+      font-weight: 950;
+    }
+
+    .intro-close {
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(25,28,35,.1);
+      border-radius: 999px;
+      background: rgba(255,255,255,.64);
+      color: var(--muted);
+      font-size: 1.05rem;
+      font-weight: 950;
+    }
+
+    .intro-body {
+      display: grid;
+      gap: 18px;
+      padding: 18px;
+    }
+
+    .intro-title {
+      margin: 0;
+      font-size: clamp(1.72rem, 4.8vw, 3.2rem);
+      line-height: 1.02;
+      letter-spacing: 0;
+      font-weight: 950;
+    }
+
+    .intro-title span {
+      color: transparent;
+      background: linear-gradient(135deg, var(--blue), var(--red));
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    .intro-steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .intro-step {
+      min-height: 118px;
+      display: grid;
+      align-content: start;
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid rgba(25,28,35,.1);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.46);
+    }
+
+    .intro-step b {
+      color: var(--blue);
+      font-size: .78rem;
+      font-weight: 950;
+    }
+
+    .intro-step strong {
+      font-size: .96rem;
+      line-height: 1.25;
+    }
+
+    .intro-step span {
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 750;
+      line-height: 1.45;
+    }
+
+    .intro-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-top: 2px;
+    }
+
+    .intro-note {
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    .intro-start {
+      min-height: 42px;
+      padding: 0 17px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--blue), var(--red));
+      color: #fff;
+      font-weight: 950;
+      white-space: nowrap;
+      box-shadow: 0 14px 28px rgba(36,92,156,.2);
+    }
+
+    :root[data-theme="dark"] .intro-overlay {
+      background:
+        radial-gradient(circle at 22% 18%, rgba(88,137,198,.16), transparent 28%),
+        radial-gradient(circle at 82% 28%, rgba(221,93,87,.12), transparent 30%),
+        rgba(16,17,15,.78);
+    }
+
+    :root[data-theme="dark"] .intro-card {
+      border-color: rgba(243,239,229,.15);
+      background:
+        linear-gradient(135deg, rgba(31,32,28,.96), rgba(22,23,20,.94)),
+        var(--panel);
+    }
+
+    :root[data-theme="dark"] .intro-step,
+    :root[data-theme="dark"] .intro-close {
+      border-color: rgba(243,239,229,.14);
+      background: rgba(255,255,255,.06);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .intro-overlay,
+      .intro-card {
+        transition: none;
+      }
+    }
+
     .site-footer {
       width: min(1360px, 100%);
       margin: 22px auto 0;
@@ -1440,6 +1614,19 @@
       .comment-form.member input[name="commentText"],
       .comment-form.member button {
         grid-column: auto;
+      }
+
+      .intro-steps {
+        grid-template-columns: 1fr;
+      }
+
+      .intro-foot {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .intro-start {
+        width: 100%;
       }
     }
   </style>
@@ -1585,6 +1772,39 @@
     </footer>
   </main>
 
+  <div id="introOverlay" class="intro-overlay" aria-hidden="true">
+    <section class="intro-card" role="dialog" aria-modal="true" aria-labelledby="introTitle">
+      <div class="intro-head">
+        <span class="intro-mark">Again 2002</span>
+        <button class="intro-close" id="introClose" type="button" aria-label="인트로 닫기">×</button>
+      </div>
+      <div class="intro-body">
+        <h2 class="intro-title" id="introTitle">팬들의 목소리를 <span>기록합니다</span></h2>
+        <div class="intro-steps">
+          <div class="intro-step">
+            <b>01</b>
+            <strong>문제는 반복되고 있습니다</strong>
+            <span>경기 결과만이 아니라 운영, 소통, 문화 전반에 팬들의 답답함이 쌓이고 있습니다.</span>
+          </div>
+          <div class="intro-step">
+            <b>02</b>
+            <strong>그래서 쇄신이 필요합니다</strong>
+            <span>비난을 키우기보다 한국 축구가 나아질 수 있는 구체적인 목소리를 모으려 합니다.</span>
+          </div>
+          <div class="intro-step">
+            <b>03</b>
+            <strong>1,000개가 모이면 전달합니다</strong>
+            <span>팬들의 의견을 정리해 축협에 공식 서신 형태로 전달하는 것이 1차 목표입니다.</span>
+          </div>
+        </div>
+        <div class="intro-foot">
+          <span class="intro-note">첫 방문 때 한 번만 표시됩니다. 위협, 개인정보, 차별 표현은 올릴 수 없습니다.</span>
+          <button class="intro-start" id="introStart" type="button">의견 쓰기</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script>
@@ -1595,6 +1815,7 @@
     const accountKey = "again2002-account-v1";
     const sessionKey = "again2002-session-v1";
     const themeKey = "again2002-theme-v1";
+    const introKey = "again2002-intro-seen-v1";
     const reportKey = "again2002-reports-v1";
     const likedPostKey = "again2002-liked-posts-v1";
     const logoAsset = "./assets/again2002-logo.png";
@@ -1673,6 +1894,9 @@
     const clearFilter = document.querySelector("#clearFilter");
     const themeToggle = document.querySelector("#themeToggle");
     const signupShortcut = document.querySelector("#signupShortcut");
+    const introOverlay = document.querySelector("#introOverlay");
+    const introClose = document.querySelector("#introClose");
+    const introStart = document.querySelector("#introStart");
 
     applyStoredTheme();
     hydrateComposerAccount();
@@ -1711,6 +1935,14 @@
         const firstAccountField = document.querySelector("#signupDisplayName, #accountNick, #composerLoginEmail");
         if (firstAccountField) firstAccountField.focus({ preventScroll: true });
       });
+    });
+
+    [introClose, introStart].forEach((button) => {
+      button.addEventListener("click", () => closeIntro(button === introStart));
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && introOverlay.classList.contains("show")) closeIntro(false);
     });
 
     clearFilter.addEventListener("click", () => {
@@ -3831,8 +4063,31 @@
       showToast.timer = setTimeout(() => toast.classList.remove("show"), 1700);
     }
 
+    function initIntro() {
+      try {
+        if (localStorage.getItem(introKey) === "seen") return;
+      } catch {}
+      requestAnimationFrame(() => {
+        introOverlay.classList.add("show");
+        introOverlay.setAttribute("aria-hidden", "false");
+        introStart.focus({ preventScroll: true });
+      });
+    }
+
+    function closeIntro(scrollToComposer = false) {
+      introOverlay.classList.remove("show");
+      introOverlay.setAttribute("aria-hidden", "true");
+      try {
+        localStorage.setItem(introKey, "seen");
+      } catch {}
+      if (scrollToComposer) {
+        setTimeout(() => postForm.scrollIntoView({ behavior: "smooth", block: "start" }), 160);
+      }
+    }
+
     applyStyleDefaults("paper");
     render();
+    initIntro();
     initService();
   </script>
 </body>
