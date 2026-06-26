@@ -143,7 +143,7 @@
 
     .brand {
       display: grid;
-      gap: 12px;
+      gap: 8px;
       justify-items: start;
     }
 
@@ -160,18 +160,25 @@
       text-decoration: none;
     }
 
+    .brand-a {
+      color: var(--blue);
+    }
+
+    .brand-g {
+      color: transparent;
+      background: linear-gradient(135deg, var(--blue) 16%, var(--red) 78%);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    .brand-year {
+      color: var(--ink);
+    }
+
     .home-link:hover {
       text-decoration: underline;
       text-decoration-thickness: .08em;
       text-underline-offset: .08em;
-    }
-
-    .brand-accent {
-      width: min(280px, 54vw);
-      height: 4px;
-      border-radius: 999px;
-      background: linear-gradient(90deg, var(--blue), var(--red));
-      opacity: .9;
     }
 
     .lead {
@@ -189,24 +196,24 @@
     }
 
     .campaign-hero {
-      width: min(720px, 100%);
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      width: min(540px, 100%);
+      display: flex;
       align-items: center;
-      gap: 18px;
-      margin-top: 2px;
-      padding: 15px 16px;
-      border: 1px solid rgba(36,92,156,.2);
-      border-radius: var(--radius);
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 6px;
+      padding: 7px 9px;
+      border: 1px solid rgba(36,92,156,.16);
+      border-radius: 999px;
       background:
-        linear-gradient(135deg, rgba(36,92,156,.1), rgba(213,59,53,.06)),
-        rgba(255,252,246,.58);
-      box-shadow: 0 14px 32px rgba(49,44,35,.08);
+        linear-gradient(135deg, rgba(36,92,156,.07), rgba(213,59,53,.045)),
+        rgba(255,252,246,.36);
     }
 
     .campaign-copy {
-      display: grid;
-      gap: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       min-width: 0;
     }
 
@@ -214,24 +221,19 @@
       color: var(--blue);
       font-size: .78rem;
       font-weight: 950;
+      white-space: nowrap;
     }
 
     .campaign-copy strong {
-      font-size: clamp(1rem, 1.8vw, 1.32rem);
+      font-size: .88rem;
       line-height: 1.2;
-    }
-
-    .campaign-copy span:last-child {
-      color: var(--muted);
-      font-size: .86rem;
-      font-weight: 800;
-      line-height: 1.35;
+      white-space: nowrap;
     }
 
     .campaign-progress {
-      min-width: 156px;
+      min-width: 104px;
       display: grid;
-      gap: 8px;
+      gap: 5px;
       text-align: right;
     }
 
@@ -246,17 +248,17 @@
     }
 
     .campaign-count b {
-      font-size: clamp(2rem, 4.2vw, 3.2rem);
+      font-size: 1.2rem;
     }
 
     .campaign-count span {
       color: var(--muted);
-      font-size: 1rem;
+      font-size: .82rem;
       font-weight: 950;
     }
 
     .campaign-bar {
-      height: 9px;
+      height: 5px;
       overflow: hidden;
       border-radius: 999px;
       background: rgba(25,28,35,.1);
@@ -1382,13 +1384,23 @@
       }
 
       .campaign-hero {
-        grid-template-columns: 1fr;
+        width: 100%;
+        align-items: flex-start;
+        flex-direction: column;
+        border-radius: var(--radius);
       }
 
-      .campaign-progress,
+      .campaign-copy {
+        flex-wrap: wrap;
+      }
+
+      .campaign-progress {
+        width: 100%;
+        text-align: left;
+      }
+
       .campaign-count {
         justify-content: flex-start;
-        text-align: left;
       }
 
       .card {
@@ -1436,17 +1448,15 @@
   <main class="app">
     <header class="topbar">
       <div class="brand">
-        <h1><a class="home-link" href="./index.html" aria-label="Again 2002 홈">Again 2002</a></h1>
-        <div class="brand-accent" aria-hidden="true"></div>
+        <h1><a class="home-link" href="./index.html" aria-label="Again 2002 홈"><span class="brand-a">A</span><span class="brand-g">g</span>ain <span class="brand-year">2002</span></a></h1>
         <p class="lead">
           <span>한국 축구, 팬들의 문제는 없는가?</span>
           <span>팬들의 목소리를 들어보겠습니다.</span>
         </p>
         <div class="campaign-hero" aria-label="1차 목표">
           <div class="campaign-copy">
-            <span class="campaign-kicker">1차 목표 · 공식 서신 전달</span>
-            <strong>1,000개의 목소리를 모읍니다</strong>
-            <span>모이면 축협에 공식 서신으로 전달합니다.</span>
+            <span class="campaign-kicker">1차 목표</span>
+            <strong>1,000개 모이면 축협에 공식 서신 전달</strong>
           </div>
           <div class="campaign-progress">
             <div class="campaign-count"><b id="campaignCount">0</b><span>/ 1000</span></div>
