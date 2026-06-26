@@ -260,8 +260,8 @@
 
     .layout {
       display: grid;
-      grid-template-columns: minmax(280px, 320px) minmax(620px, 1fr) minmax(240px, 280px);
-      gap: 16px;
+      grid-template-columns: minmax(250px, 288px) minmax(760px, 1fr) minmax(220px, 260px);
+      gap: 12px;
       align-items: start;
       padding-top: 18px;
     }
@@ -565,27 +565,29 @@
     }
 
     .feed {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(300px, 1fr));
-      gap: 15px;
-      align-items: start;
+      column-count: 2;
+      column-gap: 10px;
     }
 
     .card {
       position: relative;
-      min-height: 270px;
-      display: flex;
+      width: 100%;
+      min-height: 0;
+      display: inline-flex;
       flex-direction: column;
       justify-content: space-between;
+      margin: 0 0 10px;
       overflow: hidden;
       border: 1px solid rgba(49,44,35,.16);
       border-radius: var(--radius);
       background: var(--card-bg, var(--paper));
       color: var(--card-fg, var(--ink));
-      box-shadow: 0 16px 34px rgba(49,44,35,.13);
+      box-shadow: 0 10px 22px rgba(49,44,35,.1);
       outline: 1px solid rgba(255,255,255,.52);
       outline-offset: -4px;
       isolation: isolate;
+      break-inside: avoid;
+      vertical-align: top;
     }
 
     .card::before {
@@ -620,9 +622,9 @@
     }
 
     .card.bold {
-      min-height: 292px;
+      min-height: 0;
       border-top: 0;
-      box-shadow: 0 18px 38px rgba(96,43,35,.18);
+      box-shadow: 0 12px 26px rgba(96,43,35,.15);
     }
 
     .card.bold::before {
@@ -642,7 +644,7 @@
     }
 
     .card.board {
-      min-height: 316px;
+      min-height: 0;
       border: 6px solid #6f5944;
       background:
         radial-gradient(circle at 18% 24%, rgba(255,255,255,.07), transparent 12%),
@@ -655,8 +657,8 @@
 
     .card-main {
       display: grid;
-      gap: 14px;
-      padding: 16px 16px 12px;
+      gap: 12px;
+      padding: 14px 14px 11px;
     }
 
     .card-topline {
@@ -769,8 +771,8 @@
 
     .message {
       margin: 0;
-      min-height: 104px;
-      font-size: clamp(1.02rem, 1.45vw, 1.28rem);
+      min-height: 78px;
+      font-size: clamp(1.02rem, 1.2vw, 1.26rem);
       line-height: 1.45;
       font-weight: 900;
       overflow-wrap: anywhere;
@@ -780,8 +782,8 @@
       position: relative;
       display: grid;
       align-items: center;
-      min-height: 126px;
-      padding: 17px 2px 12px;
+      min-height: 98px;
+      padding: 15px 2px 11px;
       border-top: 1px solid rgba(29,28,24,.12);
       border-bottom: 1px solid rgba(29,28,24,.12);
     }
@@ -798,12 +800,12 @@
     }
 
     .bold .message {
-      font-size: clamp(1.12rem, 1.8vw, 1.45rem);
+      font-size: clamp(1.1rem, 1.45vw, 1.4rem);
       line-height: 1.4;
     }
 
     .board .message-shell {
-      min-height: 152px;
+      min-height: 118px;
       border-color: rgba(255,255,255,.13);
     }
 
@@ -1213,6 +1215,10 @@
       .side-stack,
       .feed {
         grid-template-columns: 1fr;
+      }
+
+      .feed {
+        column-count: 1;
       }
 
       .side-stack {
