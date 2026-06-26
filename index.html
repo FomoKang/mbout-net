@@ -1142,6 +1142,31 @@
       background: linear-gradient(90deg, var(--blue), var(--red));
     }
 
+    .campaign-goal {
+      gap: 9px;
+      padding: 13px;
+      background:
+        linear-gradient(135deg, rgba(36,92,156,.08), rgba(213,59,53,.06)),
+        rgba(255,255,255,.52);
+    }
+
+    .campaign-goal strong {
+      font-size: .95rem;
+    }
+
+    .campaign-goal .campaign-count {
+      color: var(--ink);
+      font-size: 1.35rem;
+      font-weight: 950;
+      line-height: 1;
+    }
+
+    :root[data-theme="dark"] .campaign-goal {
+      background:
+        linear-gradient(135deg, rgba(88,137,198,.12), rgba(221,93,87,.1)),
+        #24251f;
+    }
+
     .xp-bar {
       height: 9px;
       overflow: hidden;
@@ -1206,7 +1231,7 @@
 
       .side-stack {
         grid-column: 1 / -1;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
     }
 
@@ -1387,16 +1412,8 @@
 
         <section class="panel">
           <div class="panel-header">
-            <h2>작성자</h2>
-            <span class="mini" id="profileCount">선택 없음</span>
-          </div>
-          <div class="profile" id="profile"></div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-header">
-            <h2>오늘의 목표</h2>
-            <span class="mini" id="goalSummary">0/3</span>
+            <h2>1차 목표</h2>
+            <span class="mini" id="goalSummary">0/1000</span>
           </div>
           <ul class="goal-list" id="goals"></ul>
         </section>
@@ -1427,7 +1444,6 @@
     const accountKey = "again2002-account-v1";
     const sessionKey = "again2002-session-v1";
     const themeKey = "again2002-theme-v1";
-    const goalAwardKey = "again2002-goal-awards-v1";
     const reportKey = "again2002-reports-v1";
     const likedPostKey = "again2002-liked-posts-v1";
     const logoAsset = "./assets/again2002-logo.png";
@@ -1435,11 +1451,6 @@
     const serviceConfig = {
       supabaseUrl: String(globalThis.AGAIN2002_CONFIG?.supabaseUrl || "").trim(),
       supabaseAnonKey: String(globalThis.AGAIN2002_CONFIG?.supabaseAnonKey || "").trim()
-    };
-    const goalXp = {
-      likes10: 60,
-      comments50: 110,
-      posts3: 45
     };
     const slurWords = [
       "씨발", "시발", "ㅅㅂ", "ㅆㅂ", "개새끼", "새끼", "병신", "븅신", "등신", "멍청이",
@@ -2190,14 +2201,6 @@
         });
       });
       savePosts();
-    }
-
-    function loadGoalAwards() {
-      try {
-        const awards = JSON.parse(localStorage.getItem(goalAwardKey) || "null");
-        if (awards && typeof awards === "object") return awards;
-      } catch {}
-      return {};
     }
 
     function xpForNext(level) {
@@ -3363,61 +3366,18 @@
     }
 
     function renderGoals() {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const todaysPosts = posts.filter((post) => post.createdAt >= todayStart.getTime());
-      const todaysLikes = todaysPosts.reduce((sum, post) => sum + post.likes, 0);
-      const todaysComments = posts.reduce((sum, post) => {
-        return sum + post.comments.filter((comment) => comment.createdAt >= todayStart.getTime()).length;
-      }, 0);
-      const goalData = [
-        { id: "likes10", label: "하트 10개 받기", value: todaysLikes, target: 10, xp: goalXp.likes10 },
-        { id: "comments50", label: "댓글 50개 받기", value: todaysComments, target: 50, xp: goalXp.comments50 },
-        { id: "posts3", label: "글 3개 올라오기", value: todaysPosts.length, target: 3, xp: goalXp.posts3 }
-      ];
-      awardGoalXp(goalData);
-      const complete = goalData.filter((goal) => goal.value >= goal.target).length;
-      document.querySelector("#goalSummary").textContent = `${complete}/3`;
-      document.querySelector("#goals").innerHTML = goalData.map((goal) => {
-        const percent = Math.min(100, Math.round((goal.value / goal.target) * 100));
-        return `
-          <li class="goal">
-            <strong>${goal.label}</strong>
-            <span>${goal.value}/${goal.target} · EXP +${goal.xp}</span>
-            <div class="goal-meter"><span style="width:${percent}%"></span></div>
-          </li>
-        `;
-      }).join("");
-    }
-
-    function awardGoalXp(goalData) {
-      if (currentMode !== "member" || !currentAccount) return;
-      const account = currentAccount.source === "remote" ? currentAccount : loadAccounts()[currentAccount.id];
-      if (!account) return;
-
-      const todayKey = new Date().toISOString().slice(0, 10);
-      const awards = loadGoalAwards();
-      awards[account.id] = awards[account.id] || {};
-      awards[account.id][todayKey] = awards[account.id][todayKey] || {};
-
-      let gained = 0;
-      goalData.forEach((goal) => {
-        if (goal.value >= goal.target && !awards[account.id][todayKey][goal.id]) {
-          awards[account.id][todayKey][goal.id] = true;
-          gained += goal.xp;
-        }
-      });
-
-      if (!gained) return;
-      account.xp += gained;
-      while (account.xp >= xpForNext(account.level)) {
-        account.xp -= xpForNext(account.level);
-        account.level += 1;
-      }
-      saveAccount(account);
-      currentAccount = account;
-      localStorage.setItem(goalAwardKey, JSON.stringify(awards));
-      syncMemberAuthor(account);
+      const target = 1000;
+      const messageCount = posts.length;
+      const percent = Math.min(100, Math.round((messageCount / target) * 100));
+      document.querySelector("#goalSummary").textContent = `${messageCount}/${target}`;
+      document.querySelector("#goals").innerHTML = `
+        <li class="goal campaign-goal">
+          <strong>메시지 1,000개 모이면</strong>
+          <span>팬들의 목소리를 모아 축협에 공식 서신으로 전달합니다.</span>
+          <div class="campaign-count">메시지 ${messageCount}/${target}</div>
+          <div class="goal-meter"><span style="width:${percent}%"></span></div>
+        </li>
+      `;
     }
 
     function renderAccount() {
@@ -3477,7 +3437,7 @@
       accountBox.innerHTML = `
         <div class="account-item">
           <strong>회원가입</strong>
-          <span>${serviceClient ? "가입 후 인증 메일을 확인하면 왼쪽 로그인 탭에서 글을 쓸 수 있습니다." : "회원으로 글을 쓰면 IP 대신 레벨이 붙고, 오늘의 목표 EXP가 누적됩니다."}</span>
+          <span>${serviceClient ? "가입 후 인증 메일을 확인하면 왼쪽 로그인 탭에서 글을 쓸 수 있습니다." : "회원으로 글을 쓰면 IP 대신 레벨이 붙고 활동 기록이 누적됩니다."}</span>
         </div>
         <div class="account-form">
           ${accountFormFields(nick)}
@@ -3558,34 +3518,9 @@
     }
 
     function renderProfile() {
-      const profile = document.querySelector("#profile");
       const selected = activeAuthorId ? findAuthor(activeAuthorId) : null;
       document.querySelector("#feedTitle").textContent = selected ? `${selected.name}의 활동` : "전체 피드";
       clearFilter.classList.toggle("show", !!selected);
-      document.querySelector("#profileCount").textContent = selected ? selected.name : "선택 없음";
-
-      if (!selected) {
-        profile.innerHTML = `
-          <div class="profile-item">
-            <strong>작성자를 눌러보세요</strong>
-            <span>그 사람이 쓴 카드와 댓글이 피드에 모입니다.</span>
-          </div>
-        `;
-        return;
-      }
-
-      const authoredPosts = posts.filter((post) => post.authorId === selected.id);
-      const authoredComments = posts.flatMap((post) => post.comments
-        .filter((comment) => comment.authorId === selected.id)
-        .map((comment) => ({ ...comment, postText: stripTags(post.text).slice(0, 34) })));
-      profile.innerHTML = `
-        <div class="profile-item">
-          <strong>${selected.verified ? `<span class="${levelClass(selected.level)}">${selected.name}</span> Lv.${selected.level}` : `${selected.name} <span class="ip-tag">IP ${selected.ip}</span>`}</strong>
-          <span>작성 카드 ${authoredPosts.length}개 · 작성 댓글 ${authoredComments.length}개</span>
-        </div>
-        ${authoredPosts.slice(0, 3).map((post) => `<div class="profile-item"><strong>카드</strong><span>${stripTags(post.text).slice(0, 58)}</span></div>`).join("")}
-        ${authoredComments.slice(0, 3).map((comment) => `<div class="profile-item"><strong>댓글</strong><span>${stripTags(comment.text).slice(0, 42)} · ${comment.postText}</span></div>`).join("")}
-      `;
     }
 
     function findAuthor(authorId) {
