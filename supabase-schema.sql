@@ -119,7 +119,8 @@ begin
     return false;
   end if;
 
-  if auth.uid() is not null and target.author_id = auth.uid()::text then
+  if auth.uid() is not null
+    and target.author_id in (auth.uid()::text, 'auth-' || auth.uid()::text) then
     delete from public.posts where id = target_post_id;
     return true;
   end if;
