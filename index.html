@@ -381,7 +381,56 @@
     }
 
     input[type="file"] {
-      padding: 9px 10px;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .media-upload {
+      position: relative;
+      display: grid;
+      gap: 3px;
+      min-height: 58px;
+      padding: 12px 13px;
+      border: 1px dashed rgba(36,92,156,.34);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(135deg, rgba(36,92,156,.07), rgba(213,59,53,.045)),
+        rgba(255,252,246,.74);
+      color: var(--ink);
+      cursor: pointer;
+      transition: border-color .16s ease, background .16s ease, transform .16s ease;
+    }
+
+    .media-upload:hover,
+    .media-upload.is-selected {
+      border-color: rgba(36,92,156,.7);
+      background:
+        linear-gradient(135deg, rgba(36,92,156,.11), rgba(213,59,53,.07)),
+        rgba(255,252,246,.9);
+      transform: translateY(-1px);
+    }
+
+    .media-upload-title {
+      font-size: .88rem;
+      font-weight: 950;
+    }
+
+    .media-upload-sub {
+      color: var(--muted);
+      font-size: .75rem;
+      font-weight: 800;
+    }
+
+    :root[data-theme="dark"] .media-upload {
+      border-color: rgba(243,239,229,.22);
+      background:
+        linear-gradient(135deg, rgba(88,137,198,.12), rgba(221,93,87,.08)),
+        rgba(22,23,20,.78);
     }
 
     .media-note {
@@ -1155,10 +1204,22 @@
     }
 
     .campaign-goal .campaign-count {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
       color: var(--ink);
-      font-size: 1.35rem;
       font-weight: 950;
       line-height: 1;
+    }
+
+    .campaign-goal .campaign-count b {
+      font-size: 2rem;
+    }
+
+    .campaign-goal .campaign-count span {
+      color: var(--muted);
+      font-size: .95rem;
+      font-weight: 950;
     }
 
     :root[data-theme="dark"] .campaign-goal {
@@ -1345,7 +1406,11 @@
           </div>
           <div class="field">
             <label for="mediaFile">사진/영상</label>
-            <input id="mediaFile" type="file" accept="image/*,video/*" />
+            <label class="media-upload" for="mediaFile" id="mediaUpload">
+              <input id="mediaFile" type="file" accept="image/*,video/*" />
+              <span class="media-upload-title">파일 추가</span>
+              <span class="media-upload-sub">사진 또는 영상 · 5MB 이하</span>
+            </label>
             <span class="media-note" id="mediaStatus">선택 사항 · 5MB 이하</span>
           </div>
           <div class="field">
@@ -1413,7 +1478,7 @@
         <section class="panel">
           <div class="panel-header">
             <h2>1차 목표</h2>
-            <span class="mini" id="goalSummary">0/1000</span>
+            <span class="mini" id="goalSummary">공식 서신</span>
           </div>
           <ul class="goal-list" id="goals"></ul>
         </section>
@@ -1515,6 +1580,7 @@
     const passwordField = document.querySelector("#passwordField");
     const composerAccount = document.querySelector("#composerAccount");
     const mediaInput = document.querySelector("#mediaFile");
+    const mediaUpload = document.querySelector("#mediaUpload");
     const mediaStatus = document.querySelector("#mediaStatus");
     const bgColorInput = document.querySelector("#bgColor");
     const textColorInput = document.querySelector("#textColor");
@@ -1573,19 +1639,23 @@
     mediaInput.addEventListener("change", () => {
       const file = mediaInput.files?.[0];
       if (!file) {
+        mediaUpload.classList.remove("is-selected");
         mediaStatus.textContent = "선택 사항 · 5MB 이하";
         return;
       }
       if (!isAllowedMedia(file)) {
+        mediaUpload.classList.remove("is-selected");
         mediaStatus.textContent = "사진 또는 영상 파일만 올릴 수 있습니다.";
         mediaInput.value = "";
         return;
       }
       if (file.size > maxMediaBytes) {
+        mediaUpload.classList.remove("is-selected");
         mediaStatus.textContent = "5MB 이하 파일만 올릴 수 있습니다.";
         mediaInput.value = "";
         return;
       }
+      mediaUpload.classList.add("is-selected");
       mediaStatus.textContent = `${file.name} · ${formatBytes(file.size)}`;
     });
 
@@ -1649,6 +1719,7 @@
       document.querySelectorAll("#styleRow button").forEach((item) => item.classList.toggle("active", item.dataset.style === "paper"));
       document.querySelectorAll("#categoryRow button").forEach((item) => item.classList.toggle("active", item.dataset.category === "sad"));
       applyStyleDefaults("paper");
+      mediaUpload.classList.remove("is-selected");
       mediaStatus.textContent = "선택 사항 · 5MB 이하";
       notice.textContent = `${author.name}으로 올라갔습니다.`;
       showToast("피드에 올라갔습니다.");
@@ -3369,12 +3440,12 @@
       const target = 1000;
       const messageCount = posts.length;
       const percent = Math.min(100, Math.round((messageCount / target) * 100));
-      document.querySelector("#goalSummary").textContent = `${messageCount}/${target}`;
+      document.querySelector("#goalSummary").textContent = percent >= 100 ? "달성" : "공식 서신";
       document.querySelector("#goals").innerHTML = `
         <li class="goal campaign-goal">
-          <strong>메시지 1,000개 모이면</strong>
-          <span>팬들의 목소리를 모아 축협에 공식 서신으로 전달합니다.</span>
-          <div class="campaign-count">메시지 ${messageCount}/${target}</div>
+          <strong>1,000개의 목소리</strong>
+          <span>모이면 축협에 공식 서신으로 전달합니다.</span>
+          <div class="campaign-count"><b>${messageCount}</b><span>/ ${target}</span></div>
           <div class="goal-meter"><span style="width:${percent}%"></span></div>
         </li>
       `;
