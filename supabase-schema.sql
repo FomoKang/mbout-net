@@ -15,6 +15,7 @@ create table if not exists public.posts (
   media_url text not null default '',
   media_name text not null default '',
   media_size integer not null default 0,
+  delete_hash text not null default '',
   body_html text not null,
   likes integer not null default 0,
   created_at timestamptz not null default now()
@@ -66,6 +67,9 @@ alter table public.posts
   add column if not exists media_name text not null default '',
   add column if not exists media_size integer not null default 0;
 
+alter table public.posts
+  add column if not exists delete_hash text not null default '';
+
 drop policy if exists "Public posts are readable" on public.posts;
 create policy "Public posts are readable"
   on public.posts for select
@@ -96,6 +100,42 @@ drop policy if exists "Anyone can create reports" on public.reports;
 create policy "Anyone can create reports"
   on public.reports for insert
   with check (true);
+
+create or replace function public.delete_post(target_post_id text, secret_hash text default '')
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target record;
+begin
+  select id, author_id, author_type, delete_hash
+    into target
+    from public.posts
+    where id = target_post_id;
+
+  if not found then
+    return false;
+  end if;
+
+  if auth.uid() is not null and target.author_id = auth.uid()::text then
+    delete from public.posts where id = target_post_id;
+    return true;
+  end if;
+
+  if target.author_type = 'guest'
+    and target.delete_hash <> ''
+    and target.delete_hash = coalesce(secret_hash, '') then
+    delete from public.posts where id = target_post_id;
+    return true;
+  end if;
+
+  return false;
+end;
+$$;
+
+grant execute on function public.delete_post(text, text) to anon, authenticated;
 
 drop policy if exists "Profiles are readable" on public.profiles;
 create policy "Profiles are readable"

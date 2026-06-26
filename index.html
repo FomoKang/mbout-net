@@ -1037,7 +1037,8 @@
       cursor: default;
     }
 
-    .report-btn {
+    .report-btn,
+    .delete-btn {
       position: absolute;
       right: 12px;
       top: 62px;
@@ -1054,16 +1055,28 @@
       transition: opacity .16s ease, transform .16s ease, background .16s ease;
     }
 
-    .report-btn:hover {
+    .report-btn:hover,
+    .delete-btn:hover {
       opacity: 1;
       transform: translateY(-1px);
       background: rgba(255,255,255,.86);
     }
 
-    .report-btn svg {
+    .report-btn svg,
+    .delete-btn svg {
       width: 13px;
       height: 13px;
       fill: currentColor;
+    }
+
+    .delete-btn {
+      right: 44px;
+      color: #b63a3a;
+    }
+
+    .delete-btn:hover {
+      background: rgba(255,255,255,.92);
+      color: #9f2424;
     }
 
     .comments {
@@ -1827,6 +1840,8 @@
     const maxMediaBytes = 5 * 1024 * 1024;
     const bodyMediaMarkerStart = "<!--again2002-media:";
     const bodyMediaMarkerEnd = "-->";
+    const remotePostColumns = "id,author_id,author_base,author_name,author_type,author_ip,author_level,author_verified,style,category,bg_color,text_color,body_html,likes,created_at,media_type,media_url,media_name,media_size";
+    const remotePostBaseColumns = "id,author_id,author_base,author_name,author_type,author_ip,author_level,author_verified,style,bg_color,text_color,body_html,likes,created_at";
     const serviceConfig = {
       supabaseUrl: String(globalThis.AGAIN2002_CONFIG?.supabaseUrl || "").trim(),
       supabaseAnonKey: String(globalThis.AGAIN2002_CONFIG?.supabaseAnonKey || "").trim()
@@ -2023,6 +2038,7 @@
         authorIp: author.type === "member" ? "" : author.ip,
         authorLevel: author.level || 0,
         authorVerified: author.verified === true,
+        deleteHash: author.deleteHash || "",
         style: selectedStyle,
         category: selectedCategory,
         bgColor: safeHex(bgColorInput.value, colors.bg),
@@ -2137,6 +2153,7 @@
           authorIp: post.authorIp || (post.authorType === "member" ? "" : maskedIp()),
           authorLevel: Number.isFinite(post.authorLevel) ? post.authorLevel : (post.authorType === "member" ? 1 : 0),
           authorVerified: post.authorVerified === true || post.authorType === "member",
+          deleteHash: post.deleteHash || "",
           style,
           category: normalizeCategory(post.category),
           bgColor: safeHex(remapLegacyColor(post.bgColor), colors.bg),
@@ -2261,7 +2278,8 @@
           type: mode,
           ip: mode === "member" ? "" : maskedIp(),
           level: account?.level || 1,
-          verified: mode === "member"
+          verified: mode === "member",
+          deleteHash: mode === "guest" ? safePassword : ""
         };
         localStorage.setItem(registryKey, JSON.stringify(registry));
       }
@@ -2735,6 +2753,13 @@
           await reportPost(post);
         });
       });
+      document.querySelectorAll(".delete-btn").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const post = posts.find((item) => item.id === button.closest(".card").dataset.id);
+          if (!post) return;
+          await deletePost(post);
+        });
+      });
       document.querySelectorAll(".comment-form").forEach((form) => {
         form.addEventListener("submit", async (event) => {
           event.preventDefault();
@@ -2799,6 +2824,10 @@
     function cardTemplate(post) {
       const comments = post.comments || [];
       const liked = hasLikedPost(post.id);
+      const deleteButton = canDeletePost(post) ? `
+          <button class="delete-btn" type="button" title="내 카드 삭제" aria-label="내 카드 삭제">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4.5A2.5 2.5 0 0 1 10.5 2h3A2.5 2.5 0 0 1 16 4.5V5h3.5a1.5 1.5 0 0 1 0 3H19l-.8 11.2A3 3 0 0 1 15.2 22H8.8a3 3 0 0 1-3-2.8L5 8h-.5a1.5 1.5 0 0 1 0-3H8v-.5Zm3-.5a.5.5 0 0 0-.5.5V5h3v-.5A.5.5 0 0 0 13 4h-2Zm-2.5 4 .8 11h5.4l.8-11h-7Z"/></svg>
+          </button>` : "";
       return `
         <article class="card ${post.style}" data-id="${escapeAttr(post.id)}" style="--card-bg:${safeHex(post.bgColor, styleDefaults[post.style].bg)};--card-fg:${safeHex(post.textColor, styleDefaults[post.style].fg)}">
           <div class="card-main">
@@ -2820,6 +2849,7 @@
           <button class="report-btn" type="button" title="운영진에게 신고" aria-label="운영진에게 신고">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5A1.5 1.5 0 0 1 6.5 2h10.2c1.3 0 2 1.5 1.2 2.5L15.5 7l2.4 2.5c.8 1 .1 2.5-1.2 2.5H7v8.5a1.5 1.5 0 0 1-3 0v-17Z"/></svg>
           </button>
+          ${deleteButton}
           <div class="comments">
             <div class="comment-list">
               ${comments.length ? comments.map(commentTemplate).join("") : `<div class="comment"><span>아직 댓글이 없습니다.</span></div>`}
@@ -2922,6 +2952,34 @@
       localStorage.setItem(reportKey, JSON.stringify(reports));
       await persistReport(report).catch(() => {});
       showToast("운영진에게 신고가 접수됐습니다.");
+    }
+
+    function canDeletePost(post) {
+      if (!post) return false;
+      if (currentAccount && post.authorId === currentAccount.id) return true;
+      if (post.authorType === "guest" && String(post.authorId || "").includes(getClientId())) return true;
+      return false;
+    }
+
+    async function deletePost(post) {
+      if (!canDeletePost(post)) {
+        showToast("내 카드만 삭제할 수 있습니다.");
+        return;
+      }
+      if (!confirm("이 카드를 삭제할까요? 댓글도 함께 삭제됩니다.")) return;
+      const previousPosts = posts;
+      posts = posts.filter((item) => item.id !== post.id);
+      savePosts();
+      render();
+      try {
+        await persistDeletePost(post);
+        showToast("카드를 삭제했습니다.");
+      } catch (error) {
+        posts = previousPosts;
+        savePosts();
+        render();
+        if (error?.name !== "AbortError") showToast("삭제하지 못했습니다. Supabase SQL을 먼저 적용해주세요.");
+      }
     }
 
     function loadReports() {
@@ -3624,11 +3682,21 @@
 
     async function loadRemoteFeed() {
       if (!serviceClient) return;
-      const { data: remotePosts, error } = await serviceClient
+      let { data: remotePosts, error } = await serviceClient
         .from("posts")
-        .select("*")
+        .select(remotePostColumns)
         .order("created_at", { ascending: false })
         .limit(80);
+
+      if (error && isMissingColumnError(error)) {
+        const fallback = await serviceClient
+          .from("posts")
+          .select(remotePostBaseColumns)
+          .order("created_at", { ascending: false })
+          .limit(80);
+        remotePosts = fallback.data;
+        error = fallback.error;
+      }
 
       if (error) throw error;
 
@@ -3677,13 +3745,18 @@
       if (!serviceClient) return;
       const result = await serviceClient.from("posts").upsert(toRemotePost(post));
       if (result.error && isMissingColumnError(result.error)) {
+        const message = String(result.error.message || "");
         const retry = await serviceClient.from("posts").upsert(toRemotePost(post, {
-          category: !String(result.error.message || "").includes("category"),
-          media: false
+          category: !message.includes("category"),
+          media: !message.includes("media_"),
+          deleteHash: false
         }));
         if (retry.error && isMissingColumnError(retry.error)) {
-          await serviceClient.from("posts").upsert(toRemotePost(post, { category: false, media: false }));
+          const finalRetry = await serviceClient.from("posts").upsert(toRemotePost(post, { category: false, media: false, deleteHash: false }));
+          if (finalRetry.error) throw finalRetry.error;
+          return;
         }
+        if (retry.error) throw retry.error;
         return;
       }
       if (result.error) throw result.error;
@@ -3712,14 +3785,35 @@
       }).then(() => {});
     }
 
+    async function persistDeletePost(post) {
+      if (!serviceClient) return;
+      let secretHash = "";
+      if (post.authorType === "guest") {
+        const password = prompt("삭제 비밀번호를 입력해주세요.");
+        if (password === null) {
+          const abort = new Error("delete cancelled");
+          abort.name = "AbortError";
+          throw abort;
+        }
+        secretHash = simpleHash(`${post.authorBase || "익명팬"}:${String(password).trim()}`);
+      }
+      const { data, error } = await serviceClient.rpc("delete_post", {
+        target_post_id: post.id,
+        secret_hash: secretHash
+      });
+      if (error) throw error;
+      if (data !== true) throw new Error("delete not authorized");
+    }
+
     function isMissingColumnError(error) {
       const message = String(error?.message || "");
-      return message.includes("category") || message.includes("media_");
+      return message.includes("category") || message.includes("media_") || message.includes("delete_hash");
     }
 
     function toRemotePost(post, options = {}) {
       const includeCategory = options.category !== false;
       const includeMedia = options.media !== false;
+      const includeDeleteHash = options.deleteHash !== false;
       const bodyHtml = includeMedia ? post.text : encodeBodyMediaFallback(post.text, post.media);
       const payload = {
         id: post.id,
@@ -3745,6 +3839,7 @@
         payload.media_name = media?.name || "";
         payload.media_size = media?.size || 0;
       }
+      if (includeDeleteHash) payload.delete_hash = post.authorType === "guest" ? (post.deleteHash || "") : "";
       return payload;
     }
 
