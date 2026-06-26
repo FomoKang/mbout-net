@@ -1337,6 +1337,17 @@
       line-height: 1;
     }
 
+    .report-item.primary {
+      gap: 8px;
+      background:
+        linear-gradient(135deg, rgba(36,92,156,.12), rgba(189,58,58,.1)),
+        rgba(255,255,255,.58);
+    }
+
+    .report-item.primary .report-score {
+      font-size: 2.45rem;
+    }
+
     .keyword-row {
       display: flex;
       flex-wrap: wrap;
@@ -1360,6 +1371,46 @@
       border-color: rgba(243,239,229,.14);
       background: rgba(243,239,229,.07);
       color: #f3efe5;
+    }
+
+    .category-meter-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .category-meter {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr) 22px;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: .76rem;
+      font-weight: 900;
+    }
+
+    .category-track {
+      height: 7px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(25,28,35,.1);
+    }
+
+    .category-track span {
+      display: block;
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--blue), var(--red));
+    }
+
+    :root[data-theme="dark"] .report-item.primary {
+      background:
+        linear-gradient(135deg, rgba(106,154,201,.14), rgba(204,107,107,.12)),
+        #24251f;
+    }
+
+    :root[data-theme="dark"] .category-track {
+      background: rgba(243,239,229,.12);
     }
 
     .report-share {
@@ -1903,7 +1954,7 @@
             <span class="mini" id="reportDate">오늘 기준</span>
           </div>
           <div class="sentiment-report">
-            <div class="report-item">
+            <div class="report-item primary">
               <span>팬 온도</span>
               <strong class="report-score" id="reportHeat">0도</strong>
               <span id="reportHeatText">오늘 남겨진 목소리를 집계하고 있습니다.</span>
@@ -1915,8 +1966,8 @@
               </div>
             </div>
             <div class="report-item">
-              <span>공감 1위</span>
-              <strong id="reportTopLine">아직 공감이 모인 글이 없습니다.</strong>
+              <span>의견 분포</span>
+              <div class="category-meter-list" id="reportCategories"></div>
             </div>
             <div class="report-item">
               <span>오늘 모인 목소리</span>
@@ -2931,6 +2982,15 @@
       return counts.sort((a, b) => b.count - a.count || a.keyword.localeCompare(b.keyword, "ko-KR")).slice(0, 3).map((item) => item.keyword);
     }
 
+    function categoryBreakdown(items = todaysPosts()) {
+      const counts = Object.keys(categories).map((id) => ({
+        id,
+        name: categories[id],
+        count: items.filter((post) => normalizeCategory(post.category) === id).length
+      }));
+      return counts.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "ko-KR"));
+    }
+
     function reportSummary() {
       const items = todaysPosts();
       const top = topLikedPost(items);
@@ -2938,12 +2998,14 @@
       const likes = items.reduce((sum, post) => sum + (post.likes || 0), 0);
       const heat = Math.min(100, Math.round(30 + items.length * 3 + comments * 1.5 + Math.min(45, likes * .25) + Math.max(1, onlineCount)));
       const keywords = reportKeywords(items);
+      const categoryCounts = categoryBreakdown(items);
       return {
         posts: items.length,
         comments,
         likes,
         heat,
         keywords,
+        categoryCounts,
         top,
         topLine: top ? cleanLine(top.text, "아직 공감이 모인 글이 없습니다.") : "아직 공감이 모인 글이 없습니다."
       };
@@ -2972,8 +3034,23 @@
       document.querySelector("#reportHeat").textContent = `${summary.heat}도`;
       document.querySelector("#reportHeatText").textContent = heatText;
       document.querySelector("#reportKeywords").innerHTML = keywords.map((keyword) => `<span>${escapeHtml(keyword)}</span>`).join("");
-      document.querySelector("#reportTopLine").textContent = summary.top ? `“${summary.topLine}”` : summary.topLine;
+      document.querySelector("#reportCategories").innerHTML = reportCategoryTemplate(summary.categoryCounts, summary.posts);
       document.querySelector("#reportTotals").textContent = `글 ${summary.posts.toLocaleString("ko-KR")} · 댓글 ${summary.comments.toLocaleString("ko-KR")} · 공감 ${summary.likes.toLocaleString("ko-KR")}`;
+    }
+
+    function reportCategoryTemplate(categoryCounts, total) {
+      const rows = categoryCounts.filter((item) => item.count > 0).slice(0, 4);
+      if (!rows.length) return `<div class="mini">아직 집계할 의견이 없습니다.</div>`;
+      return rows.map((item) => {
+        const percent = total ? Math.max(8, Math.round((item.count / total) * 100)) : 0;
+        return `
+          <div class="category-meter">
+            <span>${escapeHtml(item.name)}</span>
+            <div class="category-track"><span style="width:${percent}%"></span></div>
+            <span>${item.count}</span>
+          </div>
+        `;
+      }).join("");
     }
 
     function compactFileName(name) {
@@ -3275,7 +3352,7 @@
     async function createSentimentReportBlob() {
       const canvas = document.createElement("canvas");
       canvas.width = 1080;
-      canvas.height = 1420;
+      canvas.height = 1350;
       const ctx = canvas.getContext("2d");
       drawSentimentReport(ctx, canvas.width, canvas.height, reportSummary());
       return new Promise((resolve, reject) => {
@@ -3285,57 +3362,128 @@
 
     function drawSentimentReport(ctx, width, height, summary) {
       ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = "#f3efe5";
+      ctx.fillStyle = "#f5efe3";
       ctx.fillRect(0, 0, width, height);
-      ctx.strokeStyle = "rgba(29,28,24,.08)";
+      drawCanvasGrid(ctx, width, height, 44, "rgba(29,28,24,.055)");
+
+      ctx.fillStyle = "#1f4f91";
+      ctx.fillRect(0, 0, width, 332);
+      ctx.fillStyle = "#bd3a3a";
+      ctx.fillRect(70, 302, width - 140, 10);
+
+      ctx.fillStyle = "#f8f3e7";
+      ctx.font = "900 34px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.fillText("Again 2002", 76, 82);
+      ctx.font = "950 88px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.fillText("오늘의 민심", 76, 190);
+      ctx.font = "800 28px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.fillText(new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(new Date()), 80, 244);
+
+      drawRoundBox(ctx, 70, 276, width - 140, 920, 30, "rgba(255,255,255,.92)", "rgba(29,28,24,.13)");
+
+      drawCanvasMetric(ctx, 116, 346, "팬 온도", `${summary.heat}도`, "오늘 글과 공감 기준", "#1f4f91");
+      drawCanvasMetric(ctx, 574, 346, "오늘 모인 목소리", `${summary.posts} / ${summary.comments} / ${summary.likes}`, "글 / 댓글 / 공감", "#bd3a3a");
+
+      ctx.fillStyle = "#6e6a61";
+      ctx.font = "900 28px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.fillText("많이 나온 말", 116, 642);
+      drawKeywordChips(ctx, summary.keywords.length ? summary.keywords : ["집계 중"], 116, 680);
+
+      ctx.fillStyle = "#6e6a61";
+      ctx.font = "900 28px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.fillText("의견 분포", 116, 822);
+      drawCategoryBars(ctx, summary.categoryCounts, summary.posts, 116, 870, 820);
+
+      ctx.fillStyle = "#1d1c18";
+      ctx.font = "950 34px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.fillText("팬들의 목소리를 오늘의 기록으로 남깁니다.", 116, 1128);
+      ctx.fillStyle = "#6e6a61";
+      ctx.font = "800 24px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.fillText("again2002.com", 116, 1168);
+
+      ctx.fillStyle = "#1d1c18";
+      ctx.font = "900 24px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.fillText("걸개는 한 문장, 민심은 오늘의 흐름을 기록합니다.", 76, 1270);
+    }
+
+    function drawCanvasGrid(ctx, width, height, step, color) {
+      ctx.save();
+      ctx.strokeStyle = color;
       ctx.lineWidth = 1;
-      for (let x = 0; x < width; x += 46) {
+      for (let x = 0; x < width; x += step) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, height);
         ctx.stroke();
       }
-      for (let y = 0; y < height; y += 46) {
+      for (let y = 0; y < height; y += step) {
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(width, y);
         ctx.stroke();
       }
-
-      ctx.fillStyle = "#1d1c18";
-      ctx.font = "900 38px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-      ctx.fillText("Again 2002", 92, 106);
-
-      ctx.font = "950 72px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-      ctx.fillText("오늘의 민심", 92, 220);
-      ctx.fillStyle = "#6e6a61";
-      ctx.font = "800 28px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-      ctx.fillText(new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(new Date()), 92, 274);
-
-      drawReportBox(ctx, 92, 340, 896, 220, "팬 온도", `${summary.heat}도`, "오늘 남겨진 글과 공감을 기준으로 집계했습니다.");
-      drawReportBox(ctx, 92, 600, 896, 190, "많이 나온 말", summary.keywords.length ? summary.keywords.join(" · ") : "집계 중", "오늘 글과 댓글에서 자주 언급된 표현입니다.");
-      drawReportBox(ctx, 92, 830, 896, 260, "공감 1위", `“${summary.topLine}”`, summary.top ? `공감 ${summary.top.likes || 0} · 댓글 ${(summary.top.comments || []).length}` : "아직 공감이 모인 글이 없습니다.");
-      drawReportBox(ctx, 92, 1130, 896, 180, "오늘 모인 목소리", `글 ${summary.posts} · 댓글 ${summary.comments} · 공감 ${summary.likes}`, "again2002.com");
+      ctx.restore();
     }
 
-    function drawReportBox(ctx, x, y, width, height, label, title, caption) {
+    function drawRoundBox(ctx, x, y, width, height, radius, fill, stroke) {
       ctx.save();
-      roundedPath(ctx, x, y, width, height, 18);
-      ctx.fillStyle = "rgba(255,255,255,.72)";
+      roundedPath(ctx, x, y, width, height, radius);
+      ctx.fillStyle = fill;
       ctx.fill();
-      ctx.strokeStyle = "rgba(29,28,24,.16)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
+      if (stroke) {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawCanvasMetric(ctx, x, y, label, value, caption, accent) {
+      drawRoundBox(ctx, x, y, 390, 220, 24, "#f8f3e7", "rgba(29,28,24,.12)");
       ctx.fillStyle = "#6e6a61";
       ctx.font = "900 26px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-      ctx.fillText(label, x + 34, y + 52);
-      ctx.fillStyle = "#1d1c18";
-      ctx.font = title.length > 36 ? "900 38px system-ui, -apple-system, BlinkMacSystemFont, sans-serif" : "950 48px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-      wrapCanvasText(ctx, title, x + 34, y + 114, width - 68, 56, Math.max(1, Math.floor((height - 120) / 56)));
+      ctx.fillText(label, x + 30, y + 52);
+      ctx.fillStyle = accent;
+      ctx.font = "950 64px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.fillText(value, x + 30, y + 126);
       ctx.fillStyle = "#6e6a61";
       ctx.font = "800 24px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-      wrapCanvasText(ctx, caption, x + 34, y + height - 38, width - 68, 32, 1);
-      ctx.restore();
+      ctx.fillText(caption, x + 30, y + 174);
+    }
+
+    function drawKeywordChips(ctx, keywords, x, y) {
+      let cursorX = x;
+      keywords.slice(0, 3).forEach((keyword, index) => {
+        const label = String(keyword);
+        ctx.font = "950 40px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+        const chipWidth = Math.max(142, ctx.measureText(label).width + 54);
+        drawRoundBox(ctx, cursorX, y, chipWidth, 78, 39, index === 0 ? "#1f4f91" : index === 1 ? "#bd3a3a" : "#45795e", null);
+        ctx.fillStyle = "#fff";
+        ctx.fillText(label, cursorX + 27, y + 52);
+        cursorX += chipWidth + 18;
+      });
+    }
+
+    function drawCategoryBars(ctx, categoryCounts, total, x, y, width) {
+      const rows = categoryCounts.filter((item) => item.count > 0).slice(0, 5);
+      if (!rows.length) {
+        ctx.fillStyle = "#1d1c18";
+        ctx.font = "900 34px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+        ctx.fillText("아직 집계할 의견이 없습니다.", x, y + 52);
+        return;
+      }
+      rows.forEach((item, index) => {
+        const rowY = y + index * 70;
+        const percent = total ? Math.round((item.count / total) * 100) : 0;
+        ctx.fillStyle = "#1d1c18";
+        ctx.font = "900 26px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+        ctx.fillText(item.name, x, rowY + 24);
+        drawRoundBox(ctx, x + 130, rowY, width - 230, 28, 14, "rgba(29,28,24,.1)", null);
+        drawRoundBox(ctx, x + 130, rowY, Math.max(16, Math.round((width - 230) * percent / 100)), 28, 14, index % 2 ? "#bd3a3a" : "#1f4f91", null);
+        ctx.fillStyle = "#6e6a61";
+        ctx.font = "900 24px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+        ctx.fillText(`${item.count}개`, x + width - 70, rowY + 24);
+      });
     }
 
     function loadLogoImage() {
