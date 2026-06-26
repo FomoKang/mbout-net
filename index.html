@@ -143,7 +143,8 @@
 
     .brand {
       display: grid;
-      gap: 8px;
+      gap: 12px;
+      justify-items: start;
     }
 
     h1 {
@@ -165,10 +166,18 @@
       text-underline-offset: .08em;
     }
 
+    .brand-accent {
+      width: min(280px, 54vw);
+      height: 4px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--blue), var(--red));
+      opacity: .9;
+    }
+
     .lead {
       display: grid;
-      gap: 4px;
-      margin-top: 2px;
+      gap: 5px;
+      margin-top: 0;
       color: var(--ink);
       font-size: clamp(1.02rem, 1.8vw, 1.45rem);
       font-weight: 850;
@@ -1365,6 +1374,7 @@
     <header class="topbar">
       <div class="brand">
         <h1><a class="home-link" href="./index.html" aria-label="Again 2002 홈">Again 2002</a></h1>
+        <div class="brand-accent" aria-hidden="true"></div>
         <p class="lead">
           <span>한국 축구, 팬들의 문제는 없는가?</span>
           <span>팬들의 목소리를 들어보겠습니다.</span>
