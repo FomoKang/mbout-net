@@ -1820,6 +1820,8 @@
     const likedPostKey = "again2002-liked-posts-v1";
     const logoAsset = "./assets/again2002-logo.png";
     const maxMediaBytes = 5 * 1024 * 1024;
+    const bodyMediaMarkerStart = "<!--again2002-media:";
+    const bodyMediaMarkerEnd = "-->";
     const serviceConfig = {
       supabaseUrl: String(globalThis.AGAIN2002_CONFIG?.supabaseUrl || "").trim(),
       supabaseAnonKey: String(globalThis.AGAIN2002_CONFIG?.supabaseAnonKey || "").trim()
@@ -2170,6 +2172,41 @@
         name: escapeHtml(media.name || (type === "video" ? "첨부 영상" : "첨부 사진")),
         size: Number.isFinite(media.size) ? media.size : 0
       };
+    }
+
+    function encodeBodyMediaFallback(bodyHtml, media) {
+      const safeMedia = normalizeMedia(media);
+      if (!safeMedia) return bodyHtml;
+      try {
+        const payload = {
+          v: 1,
+          type: safeMedia.type,
+          url: safeMedia.url,
+          name: safeMedia.name,
+          size: safeMedia.size
+        };
+        const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+        return `${bodyHtml}${bodyMediaMarkerStart}${encoded}${bodyMediaMarkerEnd}`;
+      } catch {
+        return bodyHtml;
+      }
+    }
+
+    function decodeBodyMediaFallback(bodyHtml) {
+      const body = String(bodyHtml || "");
+      const start = body.lastIndexOf(bodyMediaMarkerStart);
+      if (start === -1) return { body, media: null };
+      const valueStart = start + bodyMediaMarkerStart.length;
+      const end = body.indexOf(bodyMediaMarkerEnd, valueStart);
+      if (end === -1) return { body, media: null };
+      const visibleBody = `${body.slice(0, start)}${body.slice(end + bodyMediaMarkerEnd.length)}`.trim();
+      try {
+        const raw = body.slice(valueStart, end).trim();
+        const payload = JSON.parse(decodeURIComponent(escape(atob(raw))));
+        return { body: visibleBody, media: normalizeMedia(payload) };
+      } catch {
+        return { body: visibleBody, media: null };
+      }
     }
 
     function savePosts() {
@@ -3669,6 +3706,7 @@
     function toRemotePost(post, options = {}) {
       const includeCategory = options.category !== false;
       const includeMedia = options.media !== false;
+      const bodyHtml = includeMedia ? post.text : encodeBodyMediaFallback(post.text, post.media);
       const payload = {
         id: post.id,
         author_id: post.authorId,
@@ -3681,7 +3719,7 @@
         style: post.style,
         bg_color: post.bgColor,
         text_color: post.textColor,
-        body_html: post.text,
+        body_html: bodyHtml,
         likes: post.likes,
         created_at: new Date(post.createdAt).toISOString()
       };
@@ -3697,6 +3735,13 @@
     }
 
     function fromRemotePost(post) {
+      const bodyFallback = decodeBodyMediaFallback(post.body_html);
+      const media = normalizeMedia({
+        type: post.media_type,
+        url: post.media_url,
+        name: post.media_name,
+        size: Number(post.media_size || 0)
+      }) || bodyFallback.media;
       return {
         id: post.id,
         authorId: post.author_id,
@@ -3710,13 +3755,8 @@
         category: normalizeCategory(post.category),
         bgColor: post.bg_color,
         textColor: post.text_color,
-        text: post.body_html,
-        media: normalizeMedia({
-          type: post.media_type,
-          url: post.media_url,
-          name: post.media_name,
-          size: Number(post.media_size || 0)
-        }),
+        text: bodyFallback.body,
+        media,
         likes: post.likes || 0,
         comments: [],
         createdAt: new Date(post.created_at).getTime()
