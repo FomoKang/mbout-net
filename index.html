@@ -689,6 +689,90 @@
       margin-bottom: 12px;
     }
 
+    .daily-picket {
+      position: relative;
+      display: grid;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding: 18px;
+      overflow: hidden;
+      border: 1px solid rgba(49,44,35,.18);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(90deg, rgba(36,92,156,.08), rgba(189,58,58,.08)),
+        rgba(255,255,255,.5);
+      box-shadow: 0 12px 28px rgba(49,44,35,.1);
+    }
+
+    .daily-picket::before,
+    .daily-picket::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 8px;
+      background: rgba(49,44,35,.22);
+    }
+
+    .daily-picket::before {
+      left: 18px;
+    }
+
+    .daily-picket::after {
+      right: 18px;
+    }
+
+    .picket-kicker {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 18px;
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 950;
+    }
+
+    .picket-kicker strong {
+      color: var(--ink);
+      font-size: .9rem;
+    }
+
+    .picket-text {
+      padding: 16px 22px;
+      border-top: 3px solid rgba(49,44,35,.48);
+      border-bottom: 3px solid rgba(49,44,35,.48);
+      color: var(--ink);
+      font-size: clamp(1.15rem, 2vw, 1.75rem);
+      font-weight: 950;
+      line-height: 1.35;
+      letter-spacing: 0;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+    }
+
+    .picket-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 0 18px;
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 850;
+    }
+
+    :root[data-theme="dark"] .daily-picket {
+      border-color: rgba(243,239,229,.14);
+      background:
+        linear-gradient(90deg, rgba(106,154,201,.12), rgba(204,107,107,.12)),
+        rgba(22,23,20,.76);
+    }
+
+    :root[data-theme="dark"] .picket-kicker strong,
+    :root[data-theme="dark"] .picket-text {
+      color: #f3efe5;
+    }
+
     .feed-title {
       display: flex;
       align-items: center;
@@ -1195,7 +1279,8 @@
     .profile,
     .account,
     .stat-list,
-    .goal-list {
+    .goal-list,
+    .sentiment-report {
       display: grid;
       gap: 9px;
       padding: 13px 15px 15px;
@@ -1206,7 +1291,8 @@
     .profile-item,
     .account-item,
     .stat,
-    .goal {
+    .goal,
+    .report-item {
       display: grid;
       gap: 5px;
       padding: 11px;
@@ -1221,7 +1307,8 @@
     :root[data-theme="dark"] .profile-item,
     :root[data-theme="dark"] .account-item,
     :root[data-theme="dark"] .stat,
-    :root[data-theme="dark"] .goal {
+    :root[data-theme="dark"] .goal,
+    :root[data-theme="dark"] .report-item {
       border-color: rgba(243,239,229,.14);
       background: #24251f;
       color: #f3efe5;
@@ -1230,16 +1317,58 @@
     .profile-item strong,
     .account-item strong,
     .stat strong,
-    .goal strong {
+    .goal strong,
+    .report-item strong {
       font-size: .88rem;
     }
 
     .profile-item span,
     .account-item span,
     .stat span,
-    .goal span {
+    .goal span,
+    .report-item span {
       color: var(--muted);
       font-size: .78rem;
+    }
+
+    .report-score {
+      font-size: 2rem;
+      font-weight: 950;
+      line-height: 1;
+    }
+
+    .keyword-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .keyword-row span {
+      display: inline-flex;
+      min-height: 28px;
+      align-items: center;
+      padding: 0 9px;
+      border: 1px solid rgba(25,28,35,.1);
+      border-radius: 999px;
+      background: rgba(255,255,255,.5);
+      color: var(--ink);
+      font-size: .78rem;
+      font-weight: 900;
+    }
+
+    :root[data-theme="dark"] .keyword-row span {
+      border-color: rgba(243,239,229,.14);
+      background: rgba(243,239,229,.07);
+      color: #f3efe5;
+    }
+
+    .report-share {
+      min-height: 38px;
+      border: 1px solid rgba(25,28,35,.13);
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, var(--blue), var(--red));
+      color: #fff;
+      font-weight: 950;
     }
 
     .account-form {
@@ -1746,6 +1875,17 @@
       </aside>
 
       <section>
+        <section class="daily-picket" aria-labelledby="picketTitle">
+          <div class="picket-kicker">
+            <strong id="picketTitle">오늘의 걸개</strong>
+            <span id="picketRank">공감 기준</span>
+          </div>
+          <div class="picket-text" id="picketText">오늘 가장 많은 공감을 받은 목소리가 이 자리에 올라옵니다.</div>
+          <div class="picket-meta">
+            <span id="picketAuthor">아직 집계 중</span>
+            <span id="picketStats">매일 자정 새로 집계</span>
+          </div>
+        </section>
         <div class="feed-head">
           <div class="feed-title">
             <strong id="feedTitle">전체 피드</strong>
@@ -1757,6 +1897,35 @@
       </section>
 
       <aside class="side-stack">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>오늘의 민심</h2>
+            <span class="mini" id="reportDate">오늘 기준</span>
+          </div>
+          <div class="sentiment-report">
+            <div class="report-item">
+              <span>팬 온도</span>
+              <strong class="report-score" id="reportHeat">0도</strong>
+              <span id="reportHeatText">오늘 남겨진 목소리를 집계하고 있습니다.</span>
+            </div>
+            <div class="report-item">
+              <span>많이 나온 말</span>
+              <div class="keyword-row" id="reportKeywords">
+                <span>집계 중</span>
+              </div>
+            </div>
+            <div class="report-item">
+              <span>공감 1위</span>
+              <strong id="reportTopLine">아직 공감이 모인 글이 없습니다.</strong>
+            </div>
+            <div class="report-item">
+              <span>오늘 모인 목소리</span>
+              <strong id="reportTotals">글 0 · 댓글 0 · 공감 0</strong>
+            </div>
+            <button class="report-share" id="reportShare" type="button">민심 이미지 저장</button>
+          </div>
+        </section>
+
         <section class="panel">
           <div class="panel-header">
             <h2>팬 온도</h2>
@@ -1859,6 +2028,10 @@
       joy: "기쁨",
       fix: "개선"
     };
+    const reportKeywordBank = [
+      "전술", "책임", "변화", "선수", "기용", "교체", "감독", "협회", "운영", "소통",
+      "압박", "수비", "공격", "중원", "빌드업", "선발", "경기력", "조직력", "대표팀", "쇄신"
+    ];
     const categoryIcons = {
       sad: "😢",
       anger: "🔥",
@@ -1916,6 +2089,7 @@
     const clearFilter = document.querySelector("#clearFilter");
     const themeToggle = document.querySelector("#themeToggle");
     const signupShortcut = document.querySelector("#signupShortcut");
+    const reportShare = document.querySelector("#reportShare");
     const introOverlay = document.querySelector("#introOverlay");
     const introClose = document.querySelector("#introClose");
     const introStart = document.querySelector("#introStart");
@@ -1957,6 +2131,16 @@
         const firstAccountField = document.querySelector("#signupDisplayName, #accountNick, #composerLoginEmail");
         if (firstAccountField) firstAccountField.focus({ preventScroll: true });
       });
+    });
+
+    reportShare.addEventListener("click", async () => {
+      try {
+        const blob = await createSentimentReportBlob();
+        downloadBlob(blob, `again2002-report-${dateStamp()}.png`);
+        showToast("민심 이미지가 저장됐습니다.");
+      } catch {
+        showToast("민심 이미지를 만들 수 없습니다.");
+      }
     });
 
     [introClose, introStart].forEach((button) => {
@@ -2707,6 +2891,91 @@
       return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
     }
 
+    function todayStartTime() {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      return todayStart.getTime();
+    }
+
+    function todaysPosts() {
+      const start = todayStartTime();
+      return posts.filter((post) => post.createdAt >= start);
+    }
+
+    function cleanLine(text, fallback = "") {
+      return stripTags(text || "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 100) || fallback;
+    }
+
+    function topLikedPost(items = todaysPosts()) {
+      return [...items].sort((a, b) => {
+        const likeDiff = (b.likes || 0) - (a.likes || 0);
+        if (likeDiff) return likeDiff;
+        const commentDiff = (b.comments || []).length - (a.comments || []).length;
+        if (commentDiff) return commentDiff;
+        return (b.createdAt || 0) - (a.createdAt || 0);
+      })[0] || null;
+    }
+
+    function reportKeywords(items = todaysPosts()) {
+      const source = items.map((post) => {
+        const comments = (post.comments || []).map((comment) => comment.text).join(" ");
+        return `${stripTags(post.text || "")} ${comments}`;
+      }).join(" ");
+      const counts = reportKeywordBank.map((keyword) => ({
+        keyword,
+        count: (source.match(new RegExp(escapeRegExp(keyword), "g")) || []).length
+      })).filter((item) => item.count > 0);
+      return counts.sort((a, b) => b.count - a.count || a.keyword.localeCompare(b.keyword, "ko-KR")).slice(0, 3).map((item) => item.keyword);
+    }
+
+    function reportSummary() {
+      const items = todaysPosts();
+      const top = topLikedPost(items);
+      const comments = items.reduce((sum, post) => sum + (post.comments || []).filter((comment) => comment.createdAt >= todayStartTime()).length, 0);
+      const likes = items.reduce((sum, post) => sum + (post.likes || 0), 0);
+      const heat = Math.min(100, Math.round(30 + items.length * 3 + comments * 1.5 + Math.min(45, likes * .25) + Math.max(1, onlineCount)));
+      const keywords = reportKeywords(items);
+      return {
+        posts: items.length,
+        comments,
+        likes,
+        heat,
+        keywords,
+        top,
+        topLine: top ? cleanLine(top.text, "아직 공감이 모인 글이 없습니다.") : "아직 공감이 모인 글이 없습니다."
+      };
+    }
+
+    function renderDailyPicket(summary = reportSummary()) {
+      const top = summary.top;
+      document.querySelector("#picketText").textContent = top
+        ? `“${cleanLine(top.text, "오늘의 목소리")}”`
+        : "오늘 가장 많은 공감을 받은 목소리가 이 자리에 올라옵니다.";
+      document.querySelector("#picketAuthor").textContent = top
+        ? `${stripTags(top.authorName || "익명팬")}의 글`
+        : "아직 집계 중";
+      document.querySelector("#picketStats").textContent = top
+        ? `공감 ${(top.likes || 0).toLocaleString("ko-KR")} · 댓글 ${(top.comments || []).length.toLocaleString("ko-KR")}`
+        : "매일 자정 새로 집계";
+      document.querySelector("#picketRank").textContent = top ? "오늘 공감 1위" : "공감 기준";
+    }
+
+    function renderSentimentReport(summary = reportSummary()) {
+      const keywords = summary.keywords.length ? summary.keywords : ["집계 중"];
+      const heatText = summary.posts
+        ? "오늘 남겨진 글과 공감을 기준으로 집계했습니다."
+        : "오늘 남겨진 목소리를 집계하고 있습니다.";
+      document.querySelector("#reportDate").textContent = new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric" }).format(new Date());
+      document.querySelector("#reportHeat").textContent = `${summary.heat}도`;
+      document.querySelector("#reportHeatText").textContent = heatText;
+      document.querySelector("#reportKeywords").innerHTML = keywords.map((keyword) => `<span>${escapeHtml(keyword)}</span>`).join("");
+      document.querySelector("#reportTopLine").textContent = summary.top ? `“${summary.topLine}”` : summary.topLine;
+      document.querySelector("#reportTotals").textContent = `글 ${summary.posts.toLocaleString("ko-KR")} · 댓글 ${summary.comments.toLocaleString("ko-KR")} · 공감 ${summary.likes.toLocaleString("ko-KR")}`;
+    }
+
     function compactFileName(name) {
       const raw = String(name || "첨부 파일");
       if (raw.length <= 26) return raw;
@@ -3001,6 +3270,72 @@
       return new Promise((resolve, reject) => {
         canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("empty image")), "image/png", 0.95);
       });
+    }
+
+    async function createSentimentReportBlob() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1080;
+      canvas.height = 1420;
+      const ctx = canvas.getContext("2d");
+      drawSentimentReport(ctx, canvas.width, canvas.height, reportSummary());
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("empty image")), "image/png", 0.95);
+      });
+    }
+
+    function drawSentimentReport(ctx, width, height, summary) {
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = "#f3efe5";
+      ctx.fillRect(0, 0, width, height);
+      ctx.strokeStyle = "rgba(29,28,24,.08)";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < width; x += 46) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < height; y += 46) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = "#1d1c18";
+      ctx.font = "900 38px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.fillText("Again 2002", 92, 106);
+
+      ctx.font = "950 72px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.fillText("오늘의 민심", 92, 220);
+      ctx.fillStyle = "#6e6a61";
+      ctx.font = "800 28px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.fillText(new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(new Date()), 92, 274);
+
+      drawReportBox(ctx, 92, 340, 896, 220, "팬 온도", `${summary.heat}도`, "오늘 남겨진 글과 공감을 기준으로 집계했습니다.");
+      drawReportBox(ctx, 92, 600, 896, 190, "많이 나온 말", summary.keywords.length ? summary.keywords.join(" · ") : "집계 중", "오늘 글과 댓글에서 자주 언급된 표현입니다.");
+      drawReportBox(ctx, 92, 830, 896, 260, "공감 1위", `“${summary.topLine}”`, summary.top ? `공감 ${summary.top.likes || 0} · 댓글 ${(summary.top.comments || []).length}` : "아직 공감이 모인 글이 없습니다.");
+      drawReportBox(ctx, 92, 1130, 896, 180, "오늘 모인 목소리", `글 ${summary.posts} · 댓글 ${summary.comments} · 공감 ${summary.likes}`, "again2002.com");
+    }
+
+    function drawReportBox(ctx, x, y, width, height, label, title, caption) {
+      ctx.save();
+      roundedPath(ctx, x, y, width, height, 18);
+      ctx.fillStyle = "rgba(255,255,255,.72)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(29,28,24,.16)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = "#6e6a61";
+      ctx.font = "900 26px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.fillText(label, x + 34, y + 52);
+      ctx.fillStyle = "#1d1c18";
+      ctx.font = title.length > 36 ? "900 38px system-ui, -apple-system, BlinkMacSystemFont, sans-serif" : "950 48px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      wrapCanvasText(ctx, title, x + 34, y + 114, width - 68, 56, Math.max(1, Math.floor((height - 120) / 56)));
+      ctx.fillStyle = "#6e6a61";
+      ctx.font = "800 24px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      wrapCanvasText(ctx, caption, x + 34, y + height - 38, width - 68, 32, 1);
+      ctx.restore();
     }
 
     function loadLogoImage() {
@@ -3580,8 +3915,19 @@
       const link = document.createElement("a");
       link.href = url;
       link.download = filename;
+      link.style.display = "none";
+      document.body.appendChild(link);
       link.click();
+      link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1200);
+    }
+
+    function dateStamp() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      return `${year}${month}${day}`;
     }
 
     function mixColor(color, fallback) {
@@ -3589,15 +3935,13 @@
     }
 
     function renderStats() {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const todaysPosts = posts.filter((post) => post.createdAt >= todayStart.getTime());
+      const todayItems = todaysPosts();
       const commentCount = posts.reduce((sum, post) => sum + post.comments.length, 0);
       const todayComments = posts.reduce((sum, post) => {
-        return sum + post.comments.filter((comment) => comment.createdAt >= todayStart.getTime()).length;
+        return sum + post.comments.filter((comment) => comment.createdAt >= todayStartTime()).length;
       }, 0);
       const online = Math.max(1, onlineCount);
-      const heat = Math.min(100, Math.round(16 + online * 3 + todaysPosts.length * 4 + todayComments * 1.5));
+      const heat = Math.min(100, Math.round(16 + online * 3 + todayItems.length * 4 + todayComments * 1.5));
       document.querySelector("#heatScore").textContent = heat;
       document.querySelector("#heatBar").style.width = `${heat}%`;
       document.querySelector("#onlineText").textContent = presenceMode === "live"
@@ -3605,7 +3949,10 @@
         : "현재 이 브라우저 1명 접속 중";
       document.querySelector("#heatLabel").textContent = heat > 78 ? "매우 활발" : heat > 52 ? "활발" : "조용함";
       document.querySelector("#liveCount").textContent = `${online.toLocaleString("ko-KR")}명 접속 중`;
-      document.querySelector("#feedMeta").textContent = `오늘 ${todaysPosts.length}개 · 댓글 ${commentCount}개`;
+      document.querySelector("#feedMeta").textContent = `오늘 ${todayItems.length}개 · 댓글 ${commentCount}개`;
+      const summary = reportSummary();
+      renderDailyPicket(summary);
+      renderSentimentReport(summary);
     }
 
     async function initService() {
