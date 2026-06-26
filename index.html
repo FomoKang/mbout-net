@@ -188,6 +188,96 @@
       font-weight: 700;
     }
 
+    .campaign-hero {
+      width: min(720px, 100%);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 18px;
+      margin-top: 2px;
+      padding: 15px 16px;
+      border: 1px solid rgba(36,92,156,.2);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(135deg, rgba(36,92,156,.1), rgba(213,59,53,.06)),
+        rgba(255,252,246,.58);
+      box-shadow: 0 14px 32px rgba(49,44,35,.08);
+    }
+
+    .campaign-copy {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .campaign-kicker {
+      color: var(--blue);
+      font-size: .78rem;
+      font-weight: 950;
+    }
+
+    .campaign-copy strong {
+      font-size: clamp(1rem, 1.8vw, 1.32rem);
+      line-height: 1.2;
+    }
+
+    .campaign-copy span:last-child {
+      color: var(--muted);
+      font-size: .86rem;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .campaign-progress {
+      min-width: 156px;
+      display: grid;
+      gap: 8px;
+      text-align: right;
+    }
+
+    .campaign-count {
+      display: flex;
+      justify-content: flex-end;
+      align-items: baseline;
+      gap: 5px;
+      color: var(--ink);
+      font-weight: 950;
+      line-height: 1;
+    }
+
+    .campaign-count b {
+      font-size: clamp(2rem, 4.2vw, 3.2rem);
+    }
+
+    .campaign-count span {
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 950;
+    }
+
+    .campaign-bar {
+      height: 9px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(25,28,35,.1);
+    }
+
+    .campaign-bar span {
+      display: block;
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--blue), var(--red));
+      transition: width .25s ease;
+    }
+
+    :root[data-theme="dark"] .campaign-hero {
+      border-color: rgba(243,239,229,.15);
+      background:
+        linear-gradient(135deg, rgba(88,137,198,.12), rgba(221,93,87,.1)),
+        rgba(31,32,28,.82);
+    }
+
     .live-chip {
       display: inline-flex;
       align-items: center;
@@ -1200,43 +1290,6 @@
       background: linear-gradient(90deg, var(--blue), var(--red));
     }
 
-    .campaign-goal {
-      gap: 9px;
-      padding: 13px;
-      background:
-        linear-gradient(135deg, rgba(36,92,156,.08), rgba(213,59,53,.06)),
-        rgba(255,255,255,.52);
-    }
-
-    .campaign-goal strong {
-      font-size: .95rem;
-    }
-
-    .campaign-goal .campaign-count {
-      display: flex;
-      align-items: baseline;
-      gap: 4px;
-      color: var(--ink);
-      font-weight: 950;
-      line-height: 1;
-    }
-
-    .campaign-goal .campaign-count b {
-      font-size: 2rem;
-    }
-
-    .campaign-goal .campaign-count span {
-      color: var(--muted);
-      font-size: .95rem;
-      font-weight: 950;
-    }
-
-    :root[data-theme="dark"] .campaign-goal {
-      background:
-        linear-gradient(135deg, rgba(88,137,198,.12), rgba(221,93,87,.1)),
-        #24251f;
-    }
-
     .xp-bar {
       height: 9px;
       overflow: hidden;
@@ -1301,7 +1354,7 @@
 
       .side-stack {
         grid-column: 1 / -1;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
 
@@ -1326,6 +1379,16 @@
       .feed-head {
         flex-direction: column;
         align-items: flex-start;
+      }
+
+      .campaign-hero {
+        grid-template-columns: 1fr;
+      }
+
+      .campaign-progress,
+      .campaign-count {
+        justify-content: flex-start;
+        text-align: left;
       }
 
       .card {
@@ -1379,6 +1442,17 @@
           <span>한국 축구, 팬들의 문제는 없는가?</span>
           <span>팬들의 목소리를 들어보겠습니다.</span>
         </p>
+        <div class="campaign-hero" aria-label="1차 목표">
+          <div class="campaign-copy">
+            <span class="campaign-kicker">1차 목표 · 공식 서신 전달</span>
+            <strong>1,000개의 목소리를 모읍니다</strong>
+            <span>모이면 축협에 공식 서신으로 전달합니다.</span>
+          </div>
+          <div class="campaign-progress">
+            <div class="campaign-count"><b id="campaignCount">0</b><span>/ 1000</span></div>
+            <div class="campaign-bar"><span id="campaignBar"></span></div>
+          </div>
+        </div>
       </div>
       <div class="top-actions">
         <button class="signup-cta" id="signupShortcut" type="button">회원가입</button>
@@ -1483,14 +1557,6 @@
             </div>
             <div class="bar"><span id="heatBar"></span></div>
           </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-header">
-            <h2>1차 목표</h2>
-            <span class="mini" id="goalSummary">공식 서신</span>
-          </div>
-          <ul class="goal-list" id="goals"></ul>
         </section>
 
         <section class="panel" id="accountPanel">
@@ -3450,15 +3516,8 @@
       const target = 1000;
       const messageCount = posts.length;
       const percent = Math.min(100, Math.round((messageCount / target) * 100));
-      document.querySelector("#goalSummary").textContent = percent >= 100 ? "달성" : "공식 서신";
-      document.querySelector("#goals").innerHTML = `
-        <li class="goal campaign-goal">
-          <strong>1,000개의 목소리</strong>
-          <span>모이면 축협에 공식 서신으로 전달합니다.</span>
-          <div class="campaign-count"><b>${messageCount}</b><span>/ ${target}</span></div>
-          <div class="goal-meter"><span style="width:${percent}%"></span></div>
-        </li>
-      `;
+      document.querySelector("#campaignCount").textContent = messageCount;
+      document.querySelector("#campaignBar").style.width = `${percent}%`;
     }
 
     function renderAccount() {
