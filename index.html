@@ -708,6 +708,12 @@
         inset 0 -8px 0 #bd3a3a,
         inset 0 0 0 7px rgba(255,255,255,.48);
       transform: rotate(-.12deg);
+      cursor: pointer;
+    }
+
+    .daily-picket:focus-visible {
+      outline: 3px solid rgba(36,92,156,.28);
+      outline-offset: 3px;
     }
 
     .daily-picket::before {
@@ -791,6 +797,37 @@
       text-shadow: 0 1px 0 rgba(255,255,255,.58);
     }
 
+    .picket-body {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: stretch;
+      gap: 14px;
+    }
+
+    .picket-media {
+      width: 96px;
+      min-height: 96px;
+      align-self: center;
+      overflow: hidden;
+      border: 2px solid rgba(49,44,35,.18);
+      border-radius: 6px;
+      background: rgba(255,255,255,.56);
+      box-shadow: 0 8px 18px rgba(49,44,35,.12);
+    }
+
+    .picket-media.is-hidden {
+      display: none;
+    }
+
+    .picket-media img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
     .picket-meta {
       position: relative;
       z-index: 1;
@@ -825,6 +862,10 @@
       background: #24251f;
       border-color: rgba(243,239,229,.34);
       box-shadow: inset 0 0 0 3px rgba(243,239,229,.08), 0 2px 4px rgba(0,0,0,.22);
+    }
+
+    .card.is-focus {
+      box-shadow: 0 0 0 4px rgba(36,92,156,.18), 0 16px 34px rgba(49,44,35,.16);
     }
 
     .feed-title {
@@ -1820,6 +1861,15 @@
         right: 8px;
       }
 
+      .picket-body {
+        grid-template-columns: 1fr;
+      }
+
+      .picket-media {
+        width: 100%;
+        min-height: 160px;
+      }
+
       .picket-kicker::before {
         left: -13px;
       }
@@ -1999,12 +2049,15 @@
       </aside>
 
       <section>
-        <section class="daily-picket" aria-labelledby="picketTitle">
+        <section class="daily-picket" id="dailyPicket" tabindex="0" role="link" aria-labelledby="picketTitle">
           <div class="picket-kicker">
             <strong id="picketTitle">오늘의 걸개</strong>
             <span id="picketRank">공감 기준</span>
           </div>
-          <div class="picket-text" id="picketText">오늘 가장 많은 공감을 받은 목소리가 이 자리에 올라옵니다.</div>
+          <div class="picket-body">
+            <div class="picket-media is-hidden" id="picketMedia"></div>
+            <div class="picket-text" id="picketText">오늘 가장 많은 공감을 받은 목소리가 이 자리에 올라옵니다.</div>
+          </div>
           <div class="picket-meta">
             <span id="picketAuthor">아직 집계 중</span>
             <span id="picketStats">매일 자정 새로 집계</span>
@@ -2214,6 +2267,7 @@
     const themeToggle = document.querySelector("#themeToggle");
     const signupShortcut = document.querySelector("#signupShortcut");
     const reportShare = document.querySelector("#reportShare");
+    const dailyPicket = document.querySelector("#dailyPicket");
     const introOverlay = document.querySelector("#introOverlay");
     const introClose = document.querySelector("#introClose");
     const introStart = document.querySelector("#introStart");
@@ -2263,6 +2317,14 @@
       } catch {
         showToast("민심 이미지를 공유할 수 없습니다.");
       }
+    });
+
+    dailyPicket.addEventListener("click", () => scrollToPicketPost());
+
+    dailyPicket.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      scrollToPicketPost();
     });
 
     [introClose, introStart].forEach((button) => {
@@ -3084,9 +3146,20 @@
 
     function renderDailyPicket(summary = reportSummary()) {
       const top = summary.top;
+      const picketMedia = document.querySelector("#picketMedia");
+      const media = top ? normalizeMedia(top.media) : null;
+      dailyPicket.dataset.postId = top?.id || "";
+      dailyPicket.setAttribute("aria-label", top ? "오늘의 걸개 글로 이동" : "오늘의 걸개");
       document.querySelector("#picketText").textContent = top
         ? `“${cleanLine(top.text, "오늘의 목소리")}”`
         : "오늘 가장 많은 공감을 받은 목소리가 이 자리에 올라옵니다.";
+      if (media?.type === "image") {
+        picketMedia.classList.remove("is-hidden");
+        picketMedia.innerHTML = `<img src="${escapeAttr(media.url)}" alt="${escapeAttr(media.name || "첨부 사진")}" loading="lazy" />`;
+      } else {
+        picketMedia.classList.add("is-hidden");
+        picketMedia.innerHTML = "";
+      }
       document.querySelector("#picketAuthor").textContent = top
         ? `${stripTags(top.authorName || "익명팬")}의 글`
         : "아직 집계 중";
@@ -3094,6 +3167,23 @@
         ? `공감 ${(top.likes || 0).toLocaleString("ko-KR")} · 댓글 ${(top.comments || []).length.toLocaleString("ko-KR")}`
         : "매일 자정 새로 집계";
       document.querySelector("#picketRank").textContent = top ? "오늘 공감 1위" : "공감 기준";
+    }
+
+    function scrollToPicketPost() {
+      const postId = dailyPicket.dataset.postId;
+      if (!postId) return;
+      const selectorId = window.CSS?.escape ? CSS.escape(postId) : postId.replace(/"/g, '\\"');
+      let target = document.querySelector(`.card[data-id="${selectorId}"]`);
+      if (!target && activeAuthorId) {
+        activeAuthorId = null;
+        render();
+        target = document.querySelector(`.card[data-id="${selectorId}"]`);
+      }
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      target.classList.add("is-focus");
+      clearTimeout(scrollToPicketPost.timer);
+      scrollToPicketPost.timer = setTimeout(() => target.classList.remove("is-focus"), 1400);
     }
 
     function renderSentimentReport(summary = reportSummary()) {
