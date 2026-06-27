@@ -3129,10 +3129,12 @@
       const top = topLikedPost(items);
       const comments = items.reduce((sum, post) => sum + (post.comments || []).filter((comment) => comment.createdAt >= todayStartTime()).length, 0);
       const likes = items.reduce((sum, post) => sum + (post.likes || 0), 0);
-      const heat = Math.min(100, Math.round(30 + items.length * 3 + comments * 1.5 + Math.min(45, likes * .25) + Math.max(1, onlineCount)));
+      const hasData = items.length > 0 || comments > 0 || likes > 0;
+      const heat = hasData ? Math.min(100, Math.round(30 + items.length * 3 + comments * 1.5 + Math.min(45, likes * .25) + Math.max(1, onlineCount))) : 0;
       const keywords = reportKeywords(items);
       const categoryCounts = categoryBreakdown(items);
       return {
+        hasData,
         posts: items.length,
         comments,
         likes,
@@ -3192,7 +3194,7 @@
         ? "오늘 남겨진 글과 공감을 기준으로 집계했습니다."
         : "오늘 남겨진 목소리를 집계하고 있습니다.";
       document.querySelector("#reportDate").textContent = new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric" }).format(new Date());
-      document.querySelector("#reportHeat").textContent = `${summary.heat}도`;
+      document.querySelector("#reportHeat").textContent = summary.hasData ? `${summary.heat}도` : "집계 중";
       document.querySelector("#reportHeatText").textContent = heatText;
       document.querySelector("#reportKeywords").innerHTML = keywords.map((keyword) => `<span>${escapeHtml(keyword)}</span>`).join("");
       document.querySelector("#reportCategories").innerHTML = reportCategoryTemplate(summary.categoryCounts, summary.posts);
@@ -3536,6 +3538,10 @@
       showToast("공유가 지원되지 않아 이미지로 저장했습니다.");
     }
 
+    function reportFont(weight, size) {
+      return `${weight} ${size}px "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", Pretendard, sans-serif`;
+    }
+
     function drawSentimentReport(ctx, width, height, summary) {
       ctx.clearRect(0, 0, width, height);
       ctx.fillStyle = "#f6f1e8";
@@ -3547,29 +3553,29 @@
       drawReportFrame(ctx, margin, 74, contentW, height - 148);
 
       ctx.fillStyle = "#1d1c18";
-      ctx.font = "900 30px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.font = reportFont(700, 30);
       ctx.fillText("Again 2002", margin + 34, 132);
       ctx.fillStyle = "#706b61";
-      ctx.font = "800 24px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.font = reportFont(600, 24);
       ctx.textAlign = "right";
       ctx.fillText(new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(new Date()), width - margin - 34, 132);
       ctx.textAlign = "left";
 
       ctx.fillStyle = "#1d1c18";
-      ctx.font = "950 86px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.font = reportFont(700, 86);
       ctx.fillText("오늘의 민심", margin + 34, 246);
       drawReportRule(ctx, margin + 34, 292, contentW - 68);
 
-      drawTemperatureBlock(ctx, margin + 34, 354, summary.heat);
+      drawTemperatureBlock(ctx, margin + 34, 354, summary);
       drawCountBlock(ctx, margin + 470, 372, summary);
       drawKeywordLine(ctx, margin + 34, 620, contentW - 68, summary.keywords);
       drawMinimalDistribution(ctx, margin + 34, 790, contentW - 68, summary.categoryCounts, summary.posts);
 
       ctx.fillStyle = "#1d1c18";
-      ctx.font = "900 34px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.font = reportFont(700, 34);
       ctx.fillText("팬들의 목소리를 오늘의 기록으로 남깁니다.", margin + 34, 1168);
       ctx.fillStyle = "#706b61";
-      ctx.font = "800 24px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.font = reportFont(600, 24);
       ctx.fillText("again2002.com", margin + 34, 1210);
     }
 
@@ -3596,19 +3602,24 @@
       ctx.fillRect(x + width * .54, y + 12, width * .2, 5);
     }
 
-    function drawTemperatureBlock(ctx, x, y, heat) {
+    function drawTemperatureBlock(ctx, x, y, summary) {
       ctx.fillStyle = "#706b61";
-      ctx.font = "900 28px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.font = reportFont(700, 28);
       ctx.fillText("팬 온도", x, y);
       ctx.fillStyle = "#1d1c18";
-      ctx.font = "950 126px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-      ctx.fillText(String(heat), x, y + 132);
-      const heatWidth = ctx.measureText(String(heat)).width;
-      ctx.fillStyle = "#1f4f91";
-      ctx.font = "950 54px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-      ctx.fillText("도", x + heatWidth + 16, y + 126);
+      if (summary.hasData) {
+        ctx.font = reportFont(700, 124);
+        ctx.fillText(String(summary.heat), x, y + 132);
+        const heatWidth = ctx.measureText(String(summary.heat)).width;
+        ctx.fillStyle = "#1f4f91";
+        ctx.font = reportFont(700, 52);
+        ctx.fillText("도", x + heatWidth + 18, y + 126);
+      } else {
+        ctx.font = reportFont(700, 72);
+        ctx.fillText("집계 중", x, y + 118);
+      }
       ctx.fillStyle = "#706b61";
-      ctx.font = "800 24px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.font = reportFont(600, 24);
       ctx.fillText("오늘 글과 공감 기준", x, y + 178);
     }
 
@@ -3621,10 +3632,10 @@
       rows.forEach(([label, value], index) => {
         const rowY = y + index * 64;
         ctx.fillStyle = "#706b61";
-        ctx.font = "900 25px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+        ctx.font = reportFont(700, 25);
         ctx.fillText(label, x, rowY);
         ctx.fillStyle = index === 2 ? "#bd3a3a" : "#1d1c18";
-        ctx.font = "950 43px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+        ctx.font = reportFont(700, 43);
         ctx.textAlign = "right";
         ctx.fillText(String(value), x + 320, rowY + 8);
         ctx.textAlign = "left";
@@ -3633,22 +3644,22 @@
 
     function drawKeywordLine(ctx, x, y, width, keywords) {
       ctx.fillStyle = "#706b61";
-      ctx.font = "900 28px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.font = reportFont(700, 28);
       ctx.fillText("많이 나온 말", x, y);
       const text = (keywords.length ? keywords.slice(0, 3) : ["집계 중"]).join("  ·  ");
       ctx.fillStyle = "#1d1c18";
-      ctx.font = "950 58px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.font = reportFont(700, 54);
       wrapCanvasText(ctx, text, x, y + 78, width, 68, 2);
     }
 
     function drawMinimalDistribution(ctx, x, y, width, categoryCounts, total) {
       ctx.fillStyle = "#706b61";
-      ctx.font = "900 28px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.font = reportFont(700, 28);
       ctx.fillText("의견 분포", x, y);
       const rows = categoryCounts.filter((item) => item.count > 0).slice(0, 4);
       if (!rows.length) {
         ctx.fillStyle = "#1d1c18";
-        ctx.font = "900 34px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+        ctx.font = reportFont(700, 34);
         ctx.fillText("아직 집계할 의견이 없습니다.", x, y + 84);
         return;
       }
@@ -3656,14 +3667,14 @@
         const rowY = y + 70 + index * 58;
         const percent = total ? Math.round((item.count / total) * 100) : 0;
         ctx.fillStyle = "#1d1c18";
-        ctx.font = "900 27px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+        ctx.font = reportFont(700, 27);
         ctx.fillText(item.name, x, rowY + 20);
         ctx.fillStyle = "rgba(29,28,24,.12)";
         ctx.fillRect(x + 128, rowY, width - 230, 18);
         ctx.fillStyle = index % 2 ? "#bd3a3a" : "#1f4f91";
         ctx.fillRect(x + 128, rowY, Math.max(18, Math.round((width - 230) * percent / 100)), 18);
         ctx.fillStyle = "#706b61";
-        ctx.font = "900 24px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+        ctx.font = reportFont(700, 24);
         ctx.textAlign = "right";
         ctx.fillText(`${item.count}개`, x + width, rowY + 20);
         ctx.textAlign = "left";
